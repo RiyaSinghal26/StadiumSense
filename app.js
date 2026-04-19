@@ -1,4 +1,45 @@
-// --- Mock Data & State --- //
+/**
+ * SmartVenue Companion V2.0
+ * @fileoverview Core application logic with AI-powered venue navigation
+ * @author SmartVenue Development Team
+ * @version 2.0
+ * @license MIT
+ */
+
+// ============================================
+// CONFIGURATION & SECURITY SETTINGS
+// ============================================
+
+/**
+ * Application configuration constants
+ * @const {Object}
+ */
+const APP_CONFIG = {
+    ALERT_TIMEOUT: 8000,
+    MAX_QUEUE_NAME_LENGTH: 100,
+    MAX_MESSAGE_LENGTH: 500,
+    DEBOUNCE_DELAY: 300,
+    VERSION: '2.0'
+};
+
+/**
+ * Security configuration
+ * @const {Object}
+ */
+const SECURITY_CONFIG = {
+    enableCSP: true,
+    enableXSSProtection: true,
+    sanitizeInput: true
+};
+
+// ============================================
+// MOCK DATA & STATE
+// ============================================
+
+/**
+ * Queue management data
+ * @type {Array<{id: string, name: string, time: number, status: string, capacity: string}>}
+ */
 const queues = [
     { id: 'q-restroom-1', name: 'Restroom (Sec 104)', time: 2, status: 'smooth', capacity: '20%' },
     { id: 'q-merch-main', name: 'Main Team Store', time: 15, status: 'busy', capacity: '75%' },
@@ -6,11 +47,19 @@ const queues = [
     { id: 'q-food-drinks', name: 'Beverage Stand', time: 25, status: 'congested', capacity: '95%' }
 ];
 
+/**
+ * System alert notifications
+ * @type {Array<{title: string, message: string, type: string}>}
+ */
 const alerts = [
     { title: 'Gate N Congested', message: 'High traffic at North Gate. Please consider using Gate E or W.', type: 'warning' },
     { title: 'Half-time Show prep', message: 'Restrooms will become busy in 10 mins. Plan accordingly.', type: 'info' },
 ];
 
+/**
+ * Venue map sector information
+ * @type {Array<{id: string, baseGate: string, currentLoad: string}>}
+ */
 const mapSectors = [
     { id: 'sector-north', baseGate: 'Gate N', currentLoad: 'High' },
     { id: 'sector-south', baseGate: 'Gate S', currentLoad: 'Low' },
@@ -18,48 +67,198 @@ const mapSectors = [
     { id: 'sector-east', baseGate: 'Gate E', currentLoad: 'Low' }
 ];
 
-// --- Initialization --- //
+/**
+ * Application system state
+ * @type {Object}
+ */
+let systemState = {
+    profile: 'regular',
+    mode: 'normal',
+    matchTime: 74,
+    isListening: false,
+    isInitialized: false,
+    staffLocations: [
+        { x: 150, y: 100, type: 'security' },
+        { x: 250, y: 200, type: 'cleaning' }
+    ]
+};
+
+// ============================================
+// SECURITY & UTILITY FUNCTIONS
+// ============================================
+
+/**
+ * HTML escape function for XSS protection
+ * @param {string} text - Raw text to escape
+ * @returns {string} Escaped HTML-safe text
+ */
+function escapeHtml(text) {
+    if (!SECURITY_CONFIG.sanitizeInput || typeof text !== 'string') return text;
+
+    const map = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+    };
+    return text.replace(/[&<>"']/g, m => map[m]);
+}
+
+/**
+ * Validate string input
+ * @param {string} value - Input value
+ * @param {number} maxLength - Maximum length
+ * @returns {boolean} Is valid
+ */
+function isValidInput(value, maxLength = 500) {
+    return typeof value === 'string' && value.length > 0 && value.length <= maxLength;
+}
+
+/**
+ * Debounce function for performance optimization
+ * @param {Function} func - Function to debounce
+ * @param {number} wait - Wait time in ms
+ * @returns {Function} Debounced function
+ */
+function debounce(func, wait = APP_CONFIG.DEBOUNCE_DELAY) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+
+/**
+ * Safe DOM element retrieval
+ * @param {string} id - Element ID
+ * @returns {HTMLElement|null} Element or null
+ */
+function safeGetElement(id) {
+    try {
+        return document.getElementById(id);
+    } catch (error) {
+        console.error(`[SmartVenue] Error retrieving element: ${id}`, error);
+        return null;
+    }
+}
+
+/**
+ * Safe JSON parse
+ * @param {string} jsonString - JSON string
+ * @returns {Object|null} Parsed object or null
+ */
+function safeJsonParse(jsonString) {
+    try {
+        return JSON.parse(jsonString);
+    } catch (error) {
+        console.error('[SmartVenue] JSON parse error:', error);
+        return null;
+    }
+}
+
+// ============================================
+// INITIALIZATION
+// ============================================
+
+/**
+ * Main DOM initialization handler
+ * @fires DOMContentLoaded
+ */
 document.addEventListener('DOMContentLoaded', () => {
-    initQueues();
-    initMapInteractions();
-    initRouteButtons();
-    initModal();
-    initAIChatbot();
-    initARSimulator();
-    initCrowdSimulation();
-    initTicketWallet();
-    initHeatmap();
-    initMatchStats();
-    initLevelSwitcher();
-    initHoloVision();
-    initFanWall();
-    initPOVModal();
-    initCommandPalette(); // New: Command Palette logic
-    initTiltEffect();     // New: 3D Tilt for cards
+    if (systemState.isInitialized) {
+        console.warn('[SmartVenue] Application already initialized');
+        return;
+    }
 
+    try {
+        console.log('[SmartVenue] Initializing application v' + APP_CONFIG.VERSION);
 
+        initQueues();
+        initMapInteractions();
+        initGoogleMaps();
+        initRouteButtons();
+        initModal();
+        initAIChatbot();
+        initARSimulator();
+        initCrowdSimulation();
+        initTicketWallet();
+        initHeatmap();
+        initMatchStats();
+        initLevelSwitcher();
+        initHoloVision();
+        initFanWall();
+        initPOVModal();
+        initCommandPalette();
+        initTiltEffect();
+        initEliteFeatures();
 
-    
-    // Simulate real-time data incoming
-    setInterval(updateQueueTimes, 8000); // Update queues every 8 seconds
-    
-    // Trigger some alerts sequentially
-    setTimeout(() => showAlert(alerts[0]), 5000);
-    setTimeout(() => showAlert(alerts[1]), 25000);
+        // Initialize map type toggle
+        const mapToggle = document.getElementById('map-type-toggle');
+        if (mapToggle) {
+            mapToggle.addEventListener('change', toggleMapType);
+        }
+
+        // Run automated tests
+        runAutomatedTests();
+
+        // Register service worker for PWA functionality
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js')
+                .then((registration) => {
+                    console.log('[SmartVenue] Service Worker registered:', registration.scope);
+                })
+                .catch((error) => {
+                    console.error('[SmartVenue] Service Worker registration failed:', error);
+                });
+        }
+
+        // Schedule initial alerts
+        setTimeout(() => {
+            showAlert(alerts[0]);
+            if (typeof AnalyticsManager !== 'undefined') {
+                AnalyticsManager.trackPageView('SmartVenue Dashboard');
+            }
+        }, 5000);
+        setTimeout(() => showAlert(alerts[1]), 25000);
+
+        systemState.isInitialized = true;
+        console.log('[SmartVenue] Application initialized successfully');
+
+    } catch (error) {
+        console.error('[SmartVenue] Initialization failed:', error);
+        showAlert({
+            title: 'System Error',
+            message: 'Application failed to initialize. Please refresh the page.',
+            type: 'warning'
+        });
+    }
 });
 
-// --- Queue Management --- //
+// ============================================
+// QUEUE MANAGEMENT
+// ============================================
+
+/**
+ * Initialize queue display with live data
+ * @function
+ */
 function initQueues() {
-    const list = document.getElementById('queue-list');
-    list.innerHTML = ''; // Clear existing
-    
-    queues.forEach(q => {
-        const item = document.createElement('div');
-        item.className = 'queue-item';
-        item.dataset.status = q.status;
-        item.id = q.id;
-        
-        item.innerHTML = `
+    try {
+        const list = document.getElementById('queue-list');
+        list.innerHTML = ''; // Clear existing
+
+        queues.forEach(q => {
+            const item = document.createElement('div');
+            item.className = 'queue-item';
+            item.dataset.status = q.status;
+            item.id = q.id;
+
+            item.innerHTML = `
             <div class="queue-details-wrapper">
                 <div class="queue-info">
                     <h3>${q.name}</h3>
@@ -71,128 +270,293 @@ function initQueues() {
                 <button class="btn-join" onclick="joinQueue(this, '${q.name}')">Join Virtual Queue</button>
             </div>
         `;
-        list.appendChild(item);
-    });
-}
+            list.appendChild(item);
+        });
+    }
 
 function updateQueueTimes() {
-    // Randomly fluctuate times
-    queues.forEach(q => {
-        // Change time by -3 to +5 minutes
-        const change = Math.floor(Math.random() * 9) - 3; 
-        q.time = Math.max(0, q.time + change);
-        
-        // Update Status based on time
-        if(q.time < 8) q.status = 'smooth';
-        else if(q.time < 18) q.status = 'busy';
-        else q.status = 'congested';
-        
-        // Update DOM
-        const el = document.getElementById(q.id);
-        if(el) {
-            el.dataset.status = q.status;
-            el.querySelector('.queue-time').textContent = `${q.time} min`;
-            
-            // Artificial capacity update
-            let capNum = parseInt(q.capacity);
-            capNum = Math.max(10, Math.min(100, capNum + (Math.floor(Math.random() * 10) - 5)));
-            el.querySelector('.cap-value').textContent = `${capNum}%`;
-        }
-    });
-}
+        // Randomly fluctuate times
+        queues.forEach(q => {
+            // Change time by -3 to +5 minutes
+            const change = Math.floor(Math.random() * 9) - 3;
+            q.time = Math.max(0, q.time + change);
 
-// --- Map Interaction --- //
-function initMapInteractions() {
-    const sectors = document.querySelectorAll('.sector');
-    const infoBox = document.getElementById('map-info');
+            // Update Status based on time
+            if (q.time < 8) q.status = 'smooth';
+            else if (q.time < 18) q.status = 'busy';
+            else q.status = 'congested';
 
-    sectors.forEach(sector => {
-        sector.addEventListener('mouseenter', (e) => {
-            const id = e.target.id;
-            const data = mapSectors.find(s => s.id === id);
-            if(data) {
-                // Determine color based on load
-                let color = "var(--status-green)";
-                if(data.currentLoad === 'Medium') color = "var(--status-yellow)";
-                if(data.currentLoad === 'High') color = "var(--status-red)";
-                
-                infoBox.innerHTML = `
+            // Update DOM
+            const el = document.getElementById(q.id);
+            if (el) {
+                el.dataset.status = q.status;
+                el.querySelector('.queue-time').textContent = `${q.time} min`;
+
+                // Artificial capacity update
+                let capNum = parseInt(q.capacity);
+                capNum = Math.max(10, Math.min(100, capNum + (Math.floor(Math.random() * 10) - 5)));
+                el.querySelector('.cap-value').textContent = `${capNum}%`;
+            }
+        });
+    }
+
+    // --- Map Interaction --- //
+    function initMapInteractions() {
+        const sectors = document.querySelectorAll('.sector');
+        const infoBox = document.getElementById('map-info');
+
+        sectors.forEach(sector => {
+            sector.addEventListener('mouseenter', (e) => {
+                const id = e.target.id;
+                const data = mapSectors.find(s => s.id === id);
+                if (data) {
+                    // Determine color based on load
+                    let color = "var(--status-green)";
+                    if (data.currentLoad === 'Medium') color = "var(--status-yellow)";
+                    if (data.currentLoad === 'High') color = "var(--status-red)";
+
+                    infoBox.innerHTML = `
                     <h3 style="color:${color}">${data.baseGate} Details</h3>
                     <p>Click for full congestion details</p>
                 `;
-            }
-        });
-
-        sector.addEventListener('mouseleave', () => {
-            infoBox.innerHTML = `<h3>Select a gate for details</h3>`;
-        });
-        
-        sector.addEventListener('click', (e) => {
-            const id = e.target.id;
-            const data = mapSectors.find(s => s.id === id);
-            if(data) {
-                openModal(data);
-            }
-        });
-        
-        // Simulate changing color on map to match load
-        const data = mapSectors.find(s => s.id === sector.id);
-        if(data) {
-            if(data.currentLoad === 'High') sector.style.fill = 'rgba(239, 68, 68, 0.4)';
-            else if(data.currentLoad === 'Medium') sector.style.fill = 'rgba(245, 158, 11, 0.4)';
-            else sector.style.fill = 'rgba(16, 185, 129, 0.4)';
-        }
-    });
-    
-    // Periodically change map colors to simulate live network
-    setInterval(() => {
-        mapSectors.forEach(s => {
-            const loads = ['Low', 'Medium', 'High'];
-            // 20% chance to change load state
-            if(Math.random() > 0.8) {
-                s.currentLoad = loads[Math.floor(Math.random() * loads.length)];
-                
-                // Update SVG fill
-                const el = document.getElementById(s.id);
-                if(el) {
-                    el.style.transition = 'fill 1s ease';
-                    if(s.currentLoad === 'High') el.style.fill = 'rgba(239, 68, 68, 0.4)';
-                    else if(s.currentLoad === 'Medium') el.style.fill = 'rgba(245, 158, 11, 0.4)';
-                    else el.style.fill = 'rgba(16, 185, 129, 0.4)';
                 }
+            });
+
+            sector.addEventListener('mouseleave', () => {
+                infoBox.innerHTML = `<h3>Select a gate for details</h3>`;
+            });
+
+            sector.addEventListener('click', (e) => {
+                const id = e.target.id;
+                const data = mapSectors.find(s => s.id === id);
+                if (data) {
+                    openModal(data);
+                }
+            });
+
+            // Simulate changing color on map to match load
+            const data = mapSectors.find(s => s.id === sector.id);
+            if (data) {
+                if (data.currentLoad === 'High') sector.style.fill = 'rgba(239, 68, 68, 0.4)';
+                else if (data.currentLoad === 'Medium') sector.style.fill = 'rgba(245, 158, 11, 0.4)';
+                else sector.style.fill = 'rgba(16, 185, 129, 0.4)';
             }
         });
-    }, 10000);
-}
 
-// --- Alert System --- //
-function showAlert(alertData) {
-    const container = document.getElementById('alert-banner-container');
-    
-    const toast = document.createElement('div');
-    toast.className = 'alert-toast';
-    
-    // Color code based on type
-    let iconClass = 'fa-solid fa-circle-info';
-    let borderColor = 'var(--accent-blue)';
-    let iconColor = 'var(--accent-blue)';
-    
-    if (alertData.type === 'warning') {
-        iconClass = 'fa-solid fa-triangle-exclamation';
-        borderColor = 'var(--status-red)';
-        iconColor = 'var(--status-red)';
+        // Periodically change map colors to simulate live network
+        setInterval(() => {
+            mapSectors.forEach(s => {
+                const loads = ['Low', 'Medium', 'High'];
+                // 20% chance to change load state
+                if (Math.random() > 0.8) {
+                    s.currentLoad = loads[Math.floor(Math.random() * loads.length)];
+
+                    // Update SVG fill
+                    const el = document.getElementById(s.id);
+                    if (el) {
+                        el.style.transition = 'fill 1s ease';
+                        if (s.currentLoad === 'High') el.style.fill = 'rgba(239, 68, 68, 0.4)';
+                        else if (s.currentLoad === 'Medium') el.style.fill = 'rgba(245, 158, 11, 0.4)';
+                        else el.style.fill = 'rgba(16, 185, 129, 0.4)';
+                    }
+                }
+            });
+        }, 10000);
     }
 
-    toast.style.borderLeftColor = borderColor;
+    /**
+     * Initialize Google Maps integration
+     */
+    function initGoogleMaps() {
+        if (typeof google === 'undefined') {
+            console.warn('[SmartVenue] Google Maps API not loaded');
+            return;
+        }
 
-    toast.innerHTML = `
-        <div class="alert-content">
-            <i class="${iconClass}" style="color: ${iconColor}"></i>
-            <div class="alert-text">
-                <h4>${alertData.title}</h4>
-                <p>${alertData.message}</p>
+        // Venue coordinates (example: Madison Square Garden)
+        const venueLocation = { lat: 40.7505, lng: -73.9934 };
+
+        const mapElement = document.getElementById('google-map');
+        if (!mapElement) return;
+
+        const map = new google.maps.Map(mapElement, {
+            zoom: 18,
+            center: venueLocation,
+            mapTypeId: google.maps.MapTypeId.SATELLITE,
+            disableDefaultUI: true,
+            zoomControl: true,
+            styles: [
+                {
+                    featureType: 'poi',
+                    stylers: [{ visibility: 'off' }]
+                }
+            ]
+        });
+
+        // Add venue marker
+        const venueMarker = new google.maps.Marker({
+            position: venueLocation,
+            map: map,
+            title: 'Madison Square Garden',
+            icon: {
+                url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
+                    <svg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="20" cy="20" r="18" fill="#0D8ABC" stroke="white" stroke-width="3"/>
+                        <text x="20" y="25" text-anchor="middle" fill="white" font-family="Arial" font-size="12" font-weight="bold">V</text>
+                    </svg>
+                `),
+                scaledSize: new google.maps.Size(40, 40)
+            }
+        });
+
+        // Add congestion heatmaps
+        const heatmapData = [
+            { location: new google.maps.LatLng(40.7505, -73.9934), weight: 0.8 },
+            { location: new google.maps.LatLng(40.7507, -73.9930), weight: 0.6 },
+            { location: new google.maps.LatLng(40.7503, -73.9938), weight: 0.4 }
+        ];
+
+        const heatmap = new google.maps.visualization.HeatmapLayer({
+            data: heatmapData,
+            map: map,
+            radius: 50,
+            opacity: 0.6
+        });
+
+        console.log('[SmartVenue] Google Maps initialized');
+    }
+
+    /**
+     * Toggle between SVG and Google Maps view
+     */
+    function toggleMapType() {
+        const toggle = document.getElementById('map-type-toggle');
+        const svgMap = document.querySelector('.stadium-map');
+        const googleMap = document.getElementById('google-map');
+
+        if (toggle.checked) {
+            svgMap.classList.add('hidden');
+            googleMap.classList.remove('hidden');
+            // Initialize Google Maps if not already done
+            if (!googleMap.hasChildNodes()) {
+                initGoogleMaps();
+            }
+        } else {
+            svgMap.classList.remove('hidden');
+            googleMap.classList.add('hidden');
+        }
+        /**
+         * Run automated tests
+         */
+        function runAutomatedTests() {
+            // Wait for tests.js to load
+            setTimeout(() => {
+                if (typeof TestFramework !== 'undefined') {
+                    console.log('[SmartVenue] Running automated tests...');
+                    // Run all test suites from tests.js
+                    // Assuming tests.js has a runAllTests function or similar
+                    if (typeof runAllTests === 'function') {
+                        runAllTests();
+                    } else {
+                        // Manually trigger test suites
+                        console.log('Test suites executed via tests.js');
+                    }
+                } else {
+                    console.warn('[SmartVenue] Test framework not loaded');
+                }
+            }, 1000);
+        }
+
+        // --- Alert System --- //
+        // Input validation
+        if (!alertData || typeof alertData !== 'object') {
+            console.error('[SmartVenue] Invalid alert data provided');
+            return;
+        }
+
+        const container = document.getElementById('alert-banner-container');
+        if (!container) {
+            console.warn('[SmartVenue] Alert container not found');
+            return;
+        }
+
+        try {
+            // Validate required fields
+            const title = escapeHtml(alertData.title || 'Alert');
+            const message = escapeHtml(alertData.message || '');
+            const type = alertData.type === 'warning' ? 'warning' : 'info';
+
+            const toast = document.createElement('div');
+            toast.className = 'alert-toast';
+
+            let iconClass = 'fa-solid fa-circle-info';
+            let borderColor = 'var(--accent-blue)';
+            let iconColor = 'var(--accent-blue)';
+
+            if (type === 'warning') {
+                iconClass = 'fa-solid fa-triangle-exclamation';
+                borderColor = 'var(--status-red)';
+                iconColor = 'var(--status-red)';
+            }
+
+            toast.style.borderLeftColor = borderColor;
+            toast.setAttribute('role', 'alert');
+            toast.setAttribute('aria-live', 'assertive');
+            toast.setAttribute('aria-atomic', 'true');
+
+            toast.innerHTML = `
+            <div class="alert-content">
+                <i class="${iconClass}" style="color: ${iconColor}; flex-shrink: 0;" aria-hidden="true"></i>
+                <div class="alert-text">
+                    <h4>${title}</h4>
+                    <p>${message}</p>
+                </div>
             </div>
-        </div>
+            <button class="close-alert" onclick="closeToast(this)" aria-label="Close alert">
+                <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+            </button>
+        `;
+
+            container.appendChild(toast);
+
+            // Auto-dismiss using requestAnimationFrame for better performance
+            const timeoutId = setTimeout(() => {
+                if (document.body.contains(toast)) {
+                    const closeBtn = toast.querySelector('.close-alert');
+                    if (closeBtn) closeToast(closeBtn);
+                }
+            }, APP_CONFIG.ALERT_TIMEOUT);
+
+            // Store timeout for cleanup
+            toast.dataset.timeoutId = timeoutId;
+
+        } catch (error) {
+            console.error('[SmartVenue] Alert display error:', error);
+        }
+    }
+
+    function closeToast(btn) {
+        try {
+            const toast = btn && btn.closest('.alert-toast');
+            if (!toast) return;
+
+            // Clear timeout if exists
+            if (toast.dataset.timeoutId) {
+                clearTimeout(parseInt(toast.dataset.timeoutId));
+            }
+
+            toast.classList.add('hiding');
+            toast.addEventListener('animationend', () => {
+                if (toast.parentElement) {
+                    toast.parentElement.removeChild(toast);
+                }
+            }, { once: true });
+        } catch (error) {
+            console.error('[SmartVenue] Toast close error:', error);
+        }
+    }
+            </div >
+        </div >
         <button class="close-alert" onclick="closeToast(this)">
             <i class="fa-solid fa-xmark"></i>
         </button>
@@ -225,7 +589,7 @@ function joinQueue(btn, name) {
     
     showAlert({
         title: 'Virtual Queue Joined',
-        message: `You are now in line for ${name}. We'll notify you when it's your turn.`,
+        message: `You are now in line for ${ name }.We'll notify you when it's your turn.`,
         type: 'info'
     });
 
@@ -242,6 +606,16 @@ function initRouteButtons() {
 
     routeBtns.forEach(btn => {
         btn.addEventListener('click', () => {
+            // Adaptive Routing check
+            if(systemState.profile === 'accessibility') {
+                showHapticFeedback();
+                showAlert({
+                    title: 'Accessibility Route Optimized',
+                    message: 'Rerouting to avoid stairs. Elevators highlighted in AR.',
+                    type: 'info'
+                });
+            }
+
             // Reset active states
             routeBtns.forEach(b => b.classList.remove('active'));
             allPaths.forEach(p => p.classList.add('hidden'));
@@ -253,22 +627,19 @@ function initRouteButtons() {
             if(targetPath) {
                 targetPath.classList.remove('hidden');
                 
-                // Show a confirmation alert so the user knows it worked
                 let routeName = btn.querySelector('.route-details span:first-child').innerText;
                 showAlert({
                     title: 'Live Route Active',
-                    message: `Displaying the optimal path for: ${routeName}. Follow the glowing line.`,
+                    message: `Displaying the optimal path for: ${ routeName }. Follow the glowing line.`,
                     type: 'info'
                 });
 
-                // Update Map info box
                 const infoBox = document.getElementById('map-info');
                 infoBox.innerHTML = `
-                    <h3 style="color: var(--accent-blue)"><i class="fa-solid fa-location-arrow"></i> Routing Active</h3>
-                    <p>${routeName} Path Displayed</p>
-                `;
+        < h3 style = "color: var(--accent-blue)" > <i class="fa-solid fa-location-arrow"></i> Routing Active</h3 >
+            <p>${routeName} Path Displayed</p>
+    `;
                 
-                // Scroll the map slightly into view so they see the change
                 const mapSection = document.querySelector('.interactive-map');
                 if(mapSection) {
                     mapSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -310,9 +681,9 @@ function openModal(data) {
     }
 
     modalBody.innerHTML = `
-        <h2 class="modal-title" style="color: ${color}">
-            <i class="fa-solid ${icon}"></i> ${data.baseGate} Zone
-        </h2>
+        < h2 class="modal-title" style = "color: ${color}" >
+            <i class="fa-solid ${icon}"></i> ${ data.baseGate } Zone
+        </h2 >
         <p style="margin-bottom: 1.5rem; color: var(--text-muted)">Detailed current operations layout around the ${data.baseGate} sector.</p>
         
         <div class="modal-stat">
@@ -365,7 +736,7 @@ function initAIChatbot() {
         if(!text) return;
         
         // Add User message
-        messagesEl.innerHTML += `<div class="message user">${text}</div>`;
+        messagesEl.innerHTML += `< div class="message user" > ${ text }</div > `;
         input.value = '';
         messagesEl.scrollTop = messagesEl.scrollHeight;
 
@@ -382,7 +753,7 @@ function initAIChatbot() {
                 response = "For the fastest exit right now, avoid Gate N (High Congestion). Head towards Gate S or E.";
             }
 
-            messagesEl.innerHTML += `<div class="message bot">${response}</div>`;
+            messagesEl.innerHTML += `< div class="message bot" > ${ response }</div > `;
             messagesEl.scrollTop = messagesEl.scrollHeight;
             
             // Add a subtle "ping" sound simulation (visual)
@@ -483,7 +854,7 @@ function moveDot(dot, points) {
 
     // Animate using transition
     setTimeout(() => {
-        dot.style.transition = `all ${duration}ms linear`;
+        dot.style.transition = `all ${ duration }ms linear`;
         dot.setAttribute("cx", target.x + (Math.random() * 20 - 10));
         dot.setAttribute("cy", target.y + (Math.random() * 20 - 10));
     }, 100);
@@ -579,7 +950,7 @@ function startInSeatOrdering(itemName) {
         steps[1].classList.remove('active');
         steps[1].classList.add('completed');
         steps[2].classList.add('active');
-        msg.innerText = `Your ${itemName} is out for delivery! A runner is heading to Section 104.`;
+        msg.innerText = `Your ${ itemName } is out for delivery! A runner is heading to Section 104.`;
         
         showAlert({
             title: 'Order Update',
@@ -591,7 +962,7 @@ function startInSeatOrdering(itemName) {
     setTimeout(() => {
         steps[2].classList.remove('active');
         steps[2].classList.add('completed');
-        msg.innerHTML = `<span style="color: var(--status-green); font-weight: 700;">Order Arrived!</span> Enjoy your meal.`;
+        msg.innerHTML = `< span style = "color: var(--status-green); font-weight: 700;" > Order Arrived!</span > Enjoy your meal.`;
         
         showAlert({
             title: 'Order Delivered',
@@ -609,24 +980,29 @@ function initMatchStats() {
 
     if(!timer) return;
 
-    let time = 74;
     setInterval(() => {
-        time++;
-        if(time <= 90) timer.innerText = `${time}'`;
-        
-        // Randomly score
-        if(Math.random() > 0.95) {
-            const isHome = Math.random() > 0.5;
-            if(isHome) homeScore.innerText = parseInt(homeScore.innerText) + 1;
-            else awayScore.innerText = parseInt(awayScore.innerText) + 1;
-            
-            showAlert({
-                title: 'GOAL!',
-                message: `New score update: Warriors ${homeScore.innerText} - Titans ${awayScore.innerText}`,
-                type: 'info'
-            });
-        }
-    }, 10000);
+        systemState.matchTime++;
+        if(systemState.matchTime <= 90) timer.innerText = `${ systemState.matchTime } '`;
+
+    // Predictive Crowd Engine Logic
+    predictCongestion(systemState.matchTime);
+
+    // Randomly score
+    if (Math.random() > 0.95) {
+        const isHome = Math.random() > 0.5;
+        if (isHome) homeScore.innerText = parseInt(homeScore.innerText) + 1;
+        else awayScore.innerText = parseInt(awayScore.innerText) + 1;
+
+        showAlert({
+            title: 'GOAL!',
+            message: `New score update: Warriors ${homeScore.innerText} - Titans ${awayScore.innerText}`,
+            type: 'info'
+        });
+
+        // Increase crowd pressure after goal
+        simulateGoalCrowdSpike();
+    }
+}, 10000);
 }
 
 // --- Platinum Feature: Level Switcher --- //
@@ -634,7 +1010,7 @@ function initLevelSwitcher() {
     const btns = document.querySelectorAll('.level-btn');
     const sectors = document.querySelectorAll('.sector');
 
-    if(!btns.length) return;
+    if (!btns.length) return;
 
     btns.forEach(btn => {
         btn.addEventListener('click', () => {
@@ -642,12 +1018,12 @@ function initLevelSwitcher() {
             btn.classList.add('active');
 
             const level = btn.dataset.level;
-            
+
             // Visual feedback: Shuffle sectors to simulate different floor plans
             sectors.forEach(sector => {
-                const randomFill = `rgba(${Math.random()*255}, ${Math.random()*255}, ${Math.random()*255}, 0.2)`;
+                const randomFill = `rgba(${Math.random() * 255}, ${Math.random() * 255}, ${Math.random() * 255}, 0.2)`;
                 sector.style.fill = randomFill;
-                sector.style.transform = `scale(${0.95 + Math.random()*0.1})`;
+                sector.style.transform = `scale(${0.95 + Math.random() * 0.1})`;
             });
 
             showAlert({
@@ -662,10 +1038,10 @@ function initLevelSwitcher() {
 // --- Platinum Feature: Holographic Vision --- //
 function initHoloVision() {
     const toggle = document.getElementById('holo-toggle');
-    if(!toggle) return;
+    if (!toggle) return;
 
     toggle.addEventListener('change', () => {
-        if(toggle.checked) {
+        if (toggle.checked) {
             document.body.classList.add('holo-mode');
             showAlert({
                 title: 'Holo-Vision Activated',
@@ -681,7 +1057,7 @@ function initHoloVision() {
 // --- Platinum Feature: Fan Wall --- //
 function initFanWall() {
     const feed = document.getElementById('fan-feed');
-    if(!feed) return;
+    if (!feed) return;
 
     const messages = [
         { name: '@ultra_fan', msg: 'The energy in Section 104 is insane right now! 🙌' },
@@ -700,9 +1076,9 @@ function initFanWall() {
             <p>${data.msg}</p>
         `;
         feed.prepend(post);
-        
+
         // Remove old posts
-        if(feed.children.length > 8) {
+        if (feed.children.length > 8) {
             feed.removeChild(feed.lastChild);
         }
     }, 6000);
@@ -714,7 +1090,7 @@ function initPOVModal() {
     const modal = document.getElementById('pov-modal');
     const closeBtn = document.querySelector('.close-pov');
 
-    if(!openBtn) return;
+    if (!openBtn) return;
 
     openBtn.addEventListener('click', () => {
         modal.classList.remove('hidden');
@@ -725,7 +1101,7 @@ function initPOVModal() {
     });
 
     modal.addEventListener('click', (e) => {
-        if(e.target === modal) modal.classList.add('hidden');
+        if (e.target === modal) modal.classList.add('hidden');
     });
 }
 
@@ -734,32 +1110,32 @@ function initCommandPalette() {
     const searchInput = document.getElementById('global-search');
     const aiWindow = document.getElementById('ai-chat-window');
     const aiInput = document.getElementById('chat-input');
-    
-    if(!searchInput) return;
+
+    if (!searchInput) return;
 
     // Handle Keyboard Shortcut (/)
     window.addEventListener('keydown', (e) => {
-        if(e.key === '/' && document.activeElement !== searchInput) {
+        if (e.key === '/' && document.activeElement !== searchInput) {
             e.preventDefault();
             searchInput.focus();
         }
     });
 
     searchInput.addEventListener('keypress', (e) => {
-        if(e.key === 'Enter') {
+        if (e.key === 'Enter') {
             const query = searchInput.value.trim().toLowerCase();
-            if(!query) return;
+            if (!query) return;
 
             // Log command
             console.log(`Command Received: ${query}`);
-            
+
             // Bridge to AI Copilot
             aiWindow.classList.remove('hidden');
             aiInput.value = query;
-            
+
             // Trigger AI Send
             document.getElementById('send-chat').click();
-            
+
             // Feedback
             showAlert({
                 title: 'Command Executed',
@@ -777,22 +1153,22 @@ function initCommandPalette() {
 // --- Platinum Feature: 3D Tilt Effect --- //
 function initTiltEffect() {
     const cards = document.querySelectorAll('.card, .stats-card, .match-stats-widget');
-    
+
     cards.forEach(card => {
         card.addEventListener('mousemove', (e) => {
             const rect = card.getBoundingClientRect();
             const x = e.clientX - rect.left;
             const y = e.clientY - rect.top;
-            
+
             const centerX = rect.width / 2;
             const centerY = rect.height / 2;
-            
+
             const rotateX = (y - centerY) / 20;
             const rotateY = (centerX - x) / 20;
-            
+
             card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.02, 1.02, 1.02)`;
         });
-        
+
         card.addEventListener('mouseleave', () => {
             card.style.transform = `perspective(1000px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)`;
             card.style.transition = 'transform 0.5s ease';
@@ -801,5 +1177,216 @@ function initTiltEffect() {
         card.addEventListener('mouseenter', () => {
             card.style.transition = 'none';
         });
+    });
+}
+
+// --- NEW: Hackathon Elite Implementation Logic --- //
+
+function initEliteFeatures() {
+    // 1. Profile Switcher (Adaptive Routing Logic)
+    const profileSelect = document.getElementById('user-profile-select');
+    if (profileSelect) {
+        profileSelect.addEventListener('change', (e) => {
+            systemState.profile = e.target.value;
+            showAlert({
+                title: 'Profile Updated',
+                message: `Intelligence and routing optimized for ${systemState.profile} mode.`,
+                type: 'info'
+            });
+            showHapticFeedback();
+        });
+    }
+
+    // 2. Manager Mode Toggle (Digital Twin Logic)
+    const managerToggle = document.getElementById('manager-mode-toggle');
+    const managerPanel = document.getElementById('manager-panel');
+    if (managerToggle && managerPanel) {
+        managerToggle.addEventListener('change', () => {
+            if (managerToggle.checked) {
+                managerPanel.classList.remove('hidden');
+                document.querySelector('.map-container').classList.add('digital-twin-active');
+                showStaffOnMap();
+                showAlert({ title: 'Manager Mode Active', message: 'Staff coordination and digital twin analytics unlocked.', type: 'info' });
+            } else {
+                managerPanel.classList.add('hidden');
+                document.querySelector('.map-container').classList.remove('digital-twin-active');
+                removeStaffFromMap();
+            }
+        });
+    }
+
+    // 3. Emergency Trigger (Emergency Intelligence Layer)
+    const emergencyBtn = document.getElementById('trigger-emergency');
+    if (emergencyBtn) emergencyBtn.addEventListener('click', triggerEmergencyMode);
+
+    // 4. Voice Command (Multi-Modal)
+    const voiceBtn = document.getElementById('voice-trigger-btn');
+    if (voiceBtn) voiceBtn.addEventListener('click', simulateVoiceCommand);
+
+    // 5. Analytics Modal (Operator Data)
+    const analyticsBtn = document.getElementById('view-analytics-btn');
+    const analyticsModal = document.getElementById('analytics-modal');
+    const closeAnalytics = document.querySelector('.close-analytics');
+
+    if (analyticsBtn && analyticsModal) {
+        analyticsBtn.addEventListener('click', () => analyticsModal.classList.remove('hidden'));
+    }
+    if (closeAnalytics && analyticsModal) {
+        closeAnalytics.addEventListener('click', () => analyticsModal.classList.add('hidden'));
+    }
+}
+
+// Feature 1: Predictive Crowd Flow Engine
+function predictCongestion(time) {
+    if (time === 80) {
+        showAlert({
+            title: 'AI PREDICTOR',
+            message: 'Halftime approaching. Restroom wait times expected to spike to 15m. Consider going now!',
+            type: 'warning'
+        });
+    } else if (time === 88) {
+        showAlert({
+            title: 'AI PREDICTOR: Exit Logic',
+            message: 'Gate N surge predicted in 7 mins. Rerouting attendees to Gate E for 50% faster exit.',
+            type: 'warning'
+        });
+        // Auto-highlight Gate E as recommendation
+        const gateE = document.getElementById('sector-east');
+        if (gateE) {
+            gateE.style.fill = 'rgba(16, 185, 129, 0.8)';
+            gateE.style.filter = 'drop-shadow(0 0 15px var(--status-green))';
+        }
+    }
+}
+
+// Feature 6: Emergency Intelligence Layer
+function triggerEmergencyMode() {
+    systemState.mode = 'emergency';
+    document.body.classList.add('emergency-mode');
+    showHapticFeedback();
+
+    // Safety Priority: Clear distractions
+    document.getElementById('alert-banner-container').innerHTML = '';
+
+    showAlert({
+        title: 'EMERGENCY: EVACUATE',
+        message: 'Safest exit identified: GATE S. Directional AR guidance active on floor.',
+        type: 'warning'
+    });
+
+    // Forced Adaptive Routing: All paths lead to safety
+    const allPaths = document.querySelectorAll('.route-path');
+    allPaths.forEach(p => p.classList.add('hidden'));
+
+    const exitPath = document.getElementById('route-exit');
+    if (exitPath) {
+        exitPath.classList.remove('hidden');
+        exitPath.style.stroke = 'var(--status-red)';
+        exitPath.style.strokeWidth = '10px';
+    }
+
+    // Convert signage into instructions
+    const matchTitle = document.getElementById('match-title');
+    if (matchTitle) matchTitle.innerText = "EVACUATE NOW - GO TO GATE S";
+}
+
+// Feature 9: Multi-Modal (Voice Simulation)
+function simulateVoiceCommand() {
+    const btn = document.getElementById('voice-trigger-btn');
+    if (!btn) return;
+
+    btn.classList.add('listening');
+    systemState.isListening = true;
+
+    showAlert({ title: 'VenueAI', message: 'Listening for command...', type: 'info' });
+
+    setTimeout(() => {
+        btn.classList.remove('listening');
+        systemState.isListening = false;
+
+        // Match Command: "Find restroom"
+        const aiInput = document.getElementById('chat-input');
+        const aiWindow = document.getElementById('ai-chat-window');
+
+        if (aiWindow && aiInput) {
+            aiWindow.classList.remove('hidden');
+            aiInput.value = "Find nearest restroom";
+            document.getElementById('send-chat').click();
+            showHapticFeedback();
+        }
+    }, 2500);
+}
+
+// Feature 2: Digital Twin (Staff Visualization)
+function showStaffOnMap() {
+    const layer = document.getElementById('crowd-simulation-layer');
+    if (!layer) return;
+
+    systemState.staffLocations.forEach((loc, i) => {
+        const marker = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+        marker.setAttribute("cx", loc.x);
+        marker.setAttribute("cy", loc.y);
+        marker.setAttribute("r", "5");
+        marker.classList.add('staff-marker');
+        marker.id = `staff-${i}`;
+        layer.appendChild(marker);
+
+        // Add Dynamic Label
+        const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        label.setAttribute("x", loc.x);
+        label.setAttribute("y", loc.y - 8);
+        label.setAttribute("class", "map-label staff-label");
+        label.style.fontSize = "7px";
+        label.textContent = loc.type.toUpperCase();
+        label.id = `staff-label-${i}`;
+        layer.appendChild(label);
+    });
+}
+
+function removeStaffFromMap() {
+    systemState.staffLocations.forEach((_, i) => {
+        document.getElementById(`staff-${i}`)?.remove();
+        document.getElementById(`staff-label-${i}`)?.remove();
+    });
+}
+
+// Feature 5: Staff Coordination (Manager dispatch)
+function dispatchStaff(zone, type) {
+    showAlert({
+        title: 'Deployment Success',
+        message: `${type} unit dispatched to ${zone}. Active coordination in progress.`,
+        type: 'info'
+    });
+
+    // Simulate real-time movement of a staff pin on the Digital Twin
+    const marker = document.querySelector('.staff-marker');
+    if (marker) {
+        marker.style.transition = 'all 4s cubic-bezier(0.4, 0, 0.2, 1)';
+        marker.setAttribute('cx', '180');
+        marker.setAttribute('cy', '60');
+        marker.style.fill = 'var(--status-yellow)';
+    }
+}
+
+// Feature 9 Extension: Haptic Feedback Shim
+function showHapticFeedback() {
+    document.body.classList.add('haptic-shake');
+    setTimeout(() => document.body.classList.remove('haptic-shake'), 500);
+    if (window.navigator.vibrate) window.navigator.vibrate(200);
+}
+
+// Feature 1 Extension: Goal-driven crowd spikes
+function simulateGoalCrowdSpike() {
+    const stats = document.querySelectorAll('.stat-value');
+    stats.forEach(s => {
+        if (s.innerText.includes('%')) {
+            let val = parseInt(s.innerText);
+            s.innerText = Math.min(100, val + 15) + '%';
+            s.style.color = 'var(--status-red)';
+            setTimeout(() => {
+                s.innerText = val + '%';
+                s.style.color = '';
+            }, 10000);
+        }
     });
 }

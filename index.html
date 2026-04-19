@@ -1,17 +1,48 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SmartVenue Companion</title>
-    <meta name="description" content="Enhance your physical event experience with real-time crowd movement tracking, wait times, and coordination.">
+    <meta name="description"
+        content="Enhance your physical event experience with real-time crowd movement tracking, wait times, and coordination.">
+    <meta name="theme-color" content="#020617">
+    <link rel="manifest" href="manifest.json">
+    <title>SmartVenue Companion - Event Venue Navigation & Real-time Crowd Tracking</title>
+    <!-- Preload critical resources -->
+    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap"
+        as="style">
+    <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" as="style">
     <!-- Google Fonts for modern typography -->
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <!-- FontAwesome for Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Maps API -->
+    <script async defer
+        src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&libraries=places,geometry"></script>
     <link rel="stylesheet" href="styles.css">
+    <!-- Skip to main content link for accessibility -->
+    <style>
+        .skip-link {
+            position: absolute;
+            top: -40px;
+            left: 0;
+            background: #000;
+            color: white;
+            padding: 8px;
+            text-decoration: none;
+            z-index: 100;
+        }
+
+        .skip-link:focus {
+            top: 0;
+        }
+    </style>
 </head>
-<body>
+
+<body role="application" aria-label="SmartVenue Companion - Event Venue Navigation Application">
+    <!-- Skip to main content accessibility link -->
+    <a href="#main-content" class="skip-link">Skip to main content</a>
     <div id="nebula-bg">
         <div class="blob blob-1"></div>
         <div class="blob blob-2"></div>
@@ -21,12 +52,14 @@
 
     <!-- Digital Ticket Wallet -->
     <div id="ticket-action-area">
-        <button id="view-ticket-btn" class="glass"><i class="fa-solid fa-ticket"></i> View Digital Ticket</button>
+        <button id="view-ticket-btn" class="glass" aria-label="View your digital event ticket"><i
+                class="fa-solid fa-ticket"></i> View Digital Ticket</button>
     </div>
-    
+
     <div id="ticket-modal" class="modal-overlay hidden">
         <!-- Ticket Seat POV Button -->
-        <button id="view-pov-btn" class="glass"><i class="fa-solid fa-eye"></i> See My View</button>
+        <button id="view-pov-btn" class="glass" aria-label="View your seat perspective in augmented reality"><i
+                class="fa-solid fa-eye"></i> See My View</button>
         <div class="ticket-card-wrapper">
 
             <div class="ticket-card glass">
@@ -35,7 +68,8 @@
                         <span class="league">CHAMPIONS LEAGUE</span>
                         <h2 id="match-title">Warriors vs. Titans</h2>
                     </div>
-                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=SMARTVENUE-104-G-12" alt="Ticket QR" class="qr-code">
+                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=SMARTVENUE-104-G-12"
+                        alt="Ticket QR" class="qr-code">
                 </div>
                 <div class="ticket-divider"></div>
                 <div class="ticket-bottom">
@@ -57,31 +91,66 @@
                     </div>
                 </div>
             </div>
-            <button class="close-ticket-btn glass"><i class="fa-solid fa-xmark"></i> Close</button>
+            <button class="close-ticket-btn glass" aria-label="Close ticket modal"><i class="fa-solid fa-xmark"></i>
+                Close</button>
         </div>
     </div>
 
     <div class="app-container">
 
         <!-- Header -->
-        <header class="top-nav">
+        <header class="top-nav" role="banner">
             <div class="logo">
-                <i class="fa-solid fa-stadium"></i>
-                <h1>SmartVenue</h1>
+                <i class="fa-solid fa-stadium" aria-hidden="true"></i>
+                <h1><span>SmartVenue</span> - Event Navigation & Crowd Tracking</h1>
             </div>
 
-            <!-- New: Efficiency Command Palette -->
+            <!-- Efficiency Command Palette -->
             <div class="search-commander glass">
-                <i class="fa-solid fa-terminal"></i>
-                <input type="text" id="global-search" placeholder="Type command (e.g. 'find food' or 'exit route')">
-                <kbd>/</kbd>
+                <i class="fa-solid fa-terminal" aria-hidden="true"></i>
+                <input type="text" id="global-search" placeholder="Type command (e.g. 'find food' or 'exit route')"
+                    aria-label="Command palette - search for venue services and directions" role="searchbox">
+                <kbd aria-label="Press forward slash to open command palette">/</kbd>
             </div>
 
-            <div class="user-profile">
-                <div class="seat-info">
-                    <span class="label">Section 104 • Row G • Seat 12</span>
+            <div class="header-actions">
+                <!-- User Profile Selector -->
+                <div class="profile-switcher glass">
+                    <i class="fa-solid fa-user-gear" aria-hidden="true"></i>
+                    <label for="user-profile-select" class="sr-only">Select user profile for adaptive routing</label>
+                    <select id="user-profile-select"
+                        aria-label="User profile: choose your role for personalized experience">
+                        <option value="regular">Regular Fan</option>
+                        <option value="accessibility">Accessibility Mode</option>
+                        <option value="family">Family/Stroller</option>
+                        <option value="vip">VIP Access</option>
+                        <option value="staff">Venue Staff</option>
+                    </select>
                 </div>
-                <img src="https://ui-avatars.com/api/?name=User&background=0D8ABC&color=fff" alt="User Profile" class="avatar">
+
+                <!-- Manager Mode Toggle -->
+                <div class="manager-toggle-container glass">
+                    <label class="switch manager-switch" for="manager-mode-toggle">
+                        <input type="checkbox" id="manager-mode-toggle"
+                            aria-label="Toggle manager mode for staff coordination">
+                        <span class="slider round" aria-hidden="true"></span>
+                    </label>
+                    <span class="toggle-label">Manager Mode</span>
+                </div>
+
+                <!-- Voice Command Trigger -->
+                <button id="voice-trigger-btn" class="glass" aria-label="Activate voice commands - speak to SmartVenue"
+                    title="Click to speak your command">
+                    <i class="fa-solid fa-microphone" aria-hidden="true"></i>
+                </button>
+
+                <div class="user-profile" aria-live="polite">
+                    <div class="seat-info">
+                        <span class="label" title="Your seat location">Section 104 • Row G • Seat 12</span>
+                    </div>
+                    <img src="https://ui-avatars.com/api/?name=User&background=0D8ABC&color=fff"
+                        alt="User Profile Avatar" class="avatar">
+                </div>
             </div>
         </header>
 
@@ -107,7 +176,9 @@
             <div class="stats-card glass">
                 <span class="stat-label">Total Occupancy</span>
                 <span class="stat-value">68%</span>
-                <div class="stat-progress"><div class="bar" style="width: 68%"></div></div>
+                <div class="stat-progress">
+                    <div class="bar" style="width: 68%"></div>
+                </div>
             </div>
             <div class="stats-card glass">
                 <span class="stat-label">Avg. Wait Time</span>
@@ -138,7 +209,7 @@
 
             <!-- Main Content Grid -->
             <div class="content-grid">
-                
+
                 <!-- Venue Map Section -->
                 <section class="card glass interactive-map">
                     <header class="card-header">
@@ -156,57 +227,74 @@
                                 </label>
                                 <span class="toggle-label">Holo-Vision</span>
                             </div>
+                            <div class="toggle-container">
+                                <label class="switch map-switch">
+                                    <input type="checkbox" id="map-type-toggle">
+                                    <span class="slider round"></span>
+                                </label>
+                                <span class="toggle-label">Google Maps</span>
+                            </div>
                         </div>
                     </header>
                     <div class="map-level-selector">
-                        <button class="level-btn active" data-level="L100">L100</button>
-                        <button class="level-btn" data-level="L200">L200</button>
-                        <button class="level-btn" data-level="VIP">VIP</button>
+                        <button class="level-btn active" data-level="L100"
+                            aria-label="Switch to level 100 view">L100</button>
+                        <button class="level-btn" data-level="L200" aria-label="Switch to level 200 view">L200</button>
+                        <button class="level-btn" data-level="VIP" aria-label="Switch to VIP level view">VIP</button>
                     </div>
                     <div class="map-container-3d">
                         <div class="map-container">
 
-                        <!-- SVG Map Simulation -->
-                        <svg viewBox="0 0 400 300" class="stadium-map">
-                            <defs>
-                                <filter id="glow">
-                                    <feGaussianBlur stdDeviation="2.5" result="coloredBlur"/>
-                                    <feMerge>
-                                        <feMergeNode in="coloredBlur"/>
-                                        <feMergeNode in="SourceGraphic"/>
-                                    </feMerge>
-                                </filter>
-                            </defs>
-                            <!-- Field -->
+                            <!-- SVG Map Simulation -->
+                            <svg viewBox="0 0 400 300" class="stadium-map">
+                                <defs>
+                                    <filter id="glow">
+                                        <feGaussianBlur stdDeviation="2.5" result="coloredBlur" />
+                                        <feMerge>
+                                            <feMergeNode in="coloredBlur" />
+                                            <feMergeNode in="SourceGraphic" />
+                                        </feMerge>
+                                    </filter>
+                                </defs>
+                                <!-- Field -->
 
-                            <rect class="field" x="120" y="80" width="160" height="140" rx="20"/>
-                            <!-- Sectors -->
-                            <path class="sector" id="sector-north" d="M 120 70 Q 200 40 280 70 L 320 20 Q 200 -20 80 20 Z" />
-                            <path class="sector" id="sector-south" d="M 120 230 Q 200 260 280 230 L 320 280 Q 200 320 80 280 Z" />
-                            <path class="sector" id="sector-west" d="M 110 80 Q 80 150 110 220 L 60 250 Q 10 150 60 50 Z" />
-                            <path class="sector" id="sector-east" d="M 290 80 Q 320 150 290 220 L 340 250 Q 390 150 340 50 Z" />
-                            
-                            <!-- Labels -->
-                            <text x="200" y="45" class="map-label">Gate N (North)</text>
-                            <text x="200" y="270" class="map-label">Gate S (South)</text>
-                            <text x="40" y="155" class="map-label" transform="rotate(-90 40,155)">Gate W</text>
-                            <text x="360" y="155" class="map-label" transform="rotate(90 360,155)">Gate E</text>
-                            
-                            <!-- Interactive Route Paths (Hidden by default) -->
-                            <path class="route-path hidden" id="route-restroom" d="M 200 45 Q 200 100 280 150 L 320 150" filter="url(#glow)" />
-                            <path class="route-path hidden" id="route-food" d="M 200 45 Q 200 100 100 150 L 80 150" filter="url(#glow)" />
-                            <path class="route-path hidden" id="route-exit" d="M 200 45 Q 350 50 350 250" filter="url(#glow)" />
-                            
-                            <!-- Container for Animated Crowd Simulation Dots -->
-                            <g id="crowd-simulation-layer"></g>
-                        </svg>
+                                <rect class="field" x="120" y="80" width="160" height="140" rx="20" />
+                                <!-- Sectors -->
+                                <path class="sector" id="sector-north"
+                                    d="M 120 70 Q 200 40 280 70 L 320 20 Q 200 -20 80 20 Z" />
+                                <path class="sector" id="sector-south"
+                                    d="M 120 230 Q 200 260 280 230 L 320 280 Q 200 320 80 280 Z" />
+                                <path class="sector" id="sector-west"
+                                    d="M 110 80 Q 80 150 110 220 L 60 250 Q 10 150 60 50 Z" />
+                                <path class="sector" id="sector-east"
+                                    d="M 290 80 Q 320 150 290 220 L 340 250 Q 390 150 340 50 Z" />
 
-                        
-                        <!-- Overlay Details -->
-                        <div class="map-overlay-info" id="map-info">
-                            <h3>Select a gate for details</h3>
+                                <!-- Labels -->
+                                <text x="200" y="45" class="map-label">Gate N (North)</text>
+                                <text x="200" y="270" class="map-label">Gate S (South)</text>
+                                <text x="40" y="155" class="map-label" transform="rotate(-90 40,155)">Gate W</text>
+                                <text x="360" y="155" class="map-label" transform="rotate(90 360,155)">Gate E</text>
+
+                                <!-- Interactive Route Paths (Hidden by default) -->
+                                <path class="route-path hidden" id="route-restroom"
+                                    d="M 200 45 Q 200 100 280 150 L 320 150" filter="url(#glow)" />
+                                <path class="route-path hidden" id="route-food" d="M 200 45 Q 200 100 100 150 L 80 150"
+                                    filter="url(#glow)" />
+                                <path class="route-path hidden" id="route-exit" d="M 200 45 Q 350 50 350 250"
+                                    filter="url(#glow)" />
+
+                                <!-- Container for Animated Crowd Simulation Dots -->
+                                <g id="crowd-simulation-layer"></g>
+                            </svg>
+
+                            <!-- Google Maps Container -->
+                            <div id="google-map" class="google-map-container hidden"></div>
+
+                            <!-- Overlay Details -->
+                            <div class="map-overlay-info" id="map-info">
+                                <h3>Select a gate for details</h3>
+                            </div>
                         </div>
-                    </div>
                     </div>
                 </section>
 
@@ -228,7 +316,8 @@
                         <span class="route-hint">Click destination to view</span>
                     </header>
                     <div class="route-options">
-                        <button class="route-btn" data-route="route-restroom">
+                        <button class="route-btn" data-route="route-restroom"
+                            aria-label="Get directions to nearest restroom, 2 minute walk on level 100">
                             <i class="fa-solid fa-restroom"></i>
                             <div class="route-details">
                                 <span>Nearest Restroom</span>
@@ -236,7 +325,8 @@
                             </div>
                             <i class="fa-solid fa-chevron-right"></i>
                         </button>
-                        <button class="route-btn" data-route="route-food">
+                        <button class="route-btn" data-route="route-food"
+                            aria-label="Get directions to fastest concession stand, 3 minute walk to section 103">
                             <i class="fa-solid fa-burger"></i>
                             <div class="route-details">
                                 <span>Fastest Concession</span>
@@ -244,7 +334,8 @@
                             </div>
                             <i class="fa-solid fa-chevron-right"></i>
                         </button>
-                        <button class="route-btn" data-route="route-exit">
+                        <button class="route-btn" data-route="route-exit"
+                            aria-label="Get directions to fastest exit route">
                             <i class="fa-solid fa-door-open"></i>
                             <div class="route-details">
                                 <span>Fastest Exit Route</span>
@@ -255,11 +346,38 @@
                         <button class="route-btn ar-btn" id="launch-ar-btn">
                             <i class="fa-solid fa-vr-cardboard"></i>
                             <div class="route-details">
-                                <span style="background: -webkit-linear-gradient(45deg, #FF6B6B, #8B5CF6); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Live AR Navigation</span>
+                                <span
+                                    style="background: -webkit-linear-gradient(45deg, #FF6B6B, #8B5CF6); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Live
+                                    AR Navigation</span>
                                 <span class="route-time"><i class="fa-solid fa-camera"></i> Camera required</span>
                             </div>
                             <i class="fa-solid fa-expand"></i>
                         </button>
+                    </div>
+                </section>
+
+                <!-- New: Smart Rewards & Gamification -->
+                <section class="card glass rewards-section">
+                    <header class="card-header">
+                        <h2><i class="fa-solid fa-award"></i> Smart Rewards</h2>
+                        <span class="reward-points">1,250 PTS</span>
+                    </header>
+                    <div class="rewards-grid">
+                        <div class="reward-item glass">
+                            <i class="fa-solid fa-medal gold"></i>
+                            <span>Gate Hopper</span>
+                            <p>Used Gate E (3/3)</p>
+                        </div>
+                        <div class="reward-item glass">
+                            <i class="fa-solid fa-ticket-simple"></i>
+                            <span>Early Arrival</span>
+                            <p>+500 Points</p>
+                        </div>
+                        <div class="reward-item glass spotlight">
+                            <i class="fa-solid fa-percent"></i>
+                            <span>Off-Peak treat</span>
+                            <p>20% Discount active!</p>
+                        </div>
                     </div>
                 </section>
 
@@ -302,9 +420,40 @@
                     </div>
                 </section>
 
+                <!-- New: Staff/Manager Coordination (Hidden in Fan View) -->
+                <section class="card glass manager-dashboard hidden" id="manager-panel">
+                    <header class="card-header">
+                        <h2><i class="fa-solid fa-shield-halved"></i> Staff Coordination</h2>
+                        <button class="btn-sm glass" id="view-analytics-btn">View Analytics</button>
+                    </header>
+                    <div class="manager-grid">
+                        <div class="staff-alert-zone">
+                            <h4>Active Zone Alerts</h4>
+                            <div class="zone-alert">
+                                <span>Sec 103 (Food)</span>
+                                <button class="btn-dispatch" onclick="dispatchStaff('Sec 103', 'Security')">Dispatch
+                                    Security</button>
+                            </div>
+                            <div class="zone-alert warning">
+                                <span>Gate N (Congested)</span>
+                                <button class="btn-dispatch" onclick="dispatchStaff('Gate N', 'Traffic Flow')">Dispatch
+                                    Staff</button>
+                            </div>
+                        </div>
+                        <div class="staff-deployment">
+                            <h4>Deployment Overview</h4>
+                            <div class="deploy-stack">
+                                <div class="deploy-stat"><span>Security:</span> <span>24 Active</span></div>
+                                <div class="deploy-stat"><span>Cleaning:</span> <span>12 Active</span></div>
+                                <div class="deploy-stat"><span>Medical:</span> <span>4 Ready</span></div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
             </div>
         </main>
-        
+
         <!-- POV Modal -->
         <div id="pov-modal" class="modal-overlay hidden">
             <div class="pov-content glass">
@@ -321,6 +470,42 @@
 
     </div>
 
+    <!-- Analytics Modal -->
+    <div id="analytics-modal" class="modal-overlay hidden">
+        <div class="modal-content glass wide">
+            <button class="close-analytics"><i class="fa-solid fa-xmark"></i></button>
+            <h2><i class="fa-solid fa-chart-line"></i> Post-Event Analytics</h2>
+            <div class="analytics-charts">
+                <div class="chart-dummy glass">
+                    <h4>Crowd Density Over Time</h4>
+                    <div class="bar-chart">
+                        <div class="bar-val" style="height: 40%"></div>
+                        <div class="bar-val" style="height: 70%"></div>
+                        <div class="bar-val" style="height: 90%"></div>
+                        <div class="bar-val" style="height: 100%"></div>
+                        <div class="bar-val" style="height: 60%"></div>
+                        <div class="bar-val" style="height: 30%"></div>
+                    </div>
+                </div>
+                <div class="chart-dummy glass">
+                    <h4>Revenue Spike (Halftime)</h4>
+                    <div class="line-chart">
+                        <svg viewBox="0 0 200 100">
+                            <path d="M 0 100 Q 50 80 100 20 T 200 10" fill="none" stroke="var(--accent-blue)"
+                                stroke-width="3" />
+                        </svg>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Emergency Trigger (Subtle) -->
+    <div id="emergency-area">
+        <button id="trigger-emergency" title="Emergency Mode Simulation"><i
+                class="fa-solid fa-triangle-exclamation"></i></button>
+    </div>
+
     <!-- AI Copilot Chatbot -->
     <div id="ai-chat-widget">
         <button id="ai-fab" class="glass"><i class="fa-solid fa-robot"></i></button>
@@ -330,7 +515,8 @@
                 <button id="close-chat"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <div class="chat-messages" id="chat-messages">
-                <div class="message bot">Hi! I'm your AI venue copilot. How can I help you navigate the stadium today?</div>
+                <div class="message bot">Hi! I'm your AI venue copilot. How can I help you navigate the stadium today?
+                </div>
             </div>
             <div class="chat-input-area">
                 <input type="text" id="chat-input" placeholder="Ask about wait times, food...">
@@ -359,5 +545,7 @@
     </div>
 
     <script src="app.js"></script>
+    <script src="tests.js"></script>
 </body>
+
 </html>
