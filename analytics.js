@@ -130,15 +130,39 @@ const AnalyticsManager = (() => {
          * @param {string} routeName - Route name
          */
         trackRouteUsage: (routeName) => {
-            if (typeof gtag !== 'function') return;
-
-            gtag('event', 'route_used', {
-                'route_name': routeName,
-                'timestamp': new Date().toISOString()
+            AnalyticsManager.trackEvent('route_used', {
+                route_name: routeName
             });
-
             events.push({ event: 'route_used', data: { routeName }, time: Date.now() });
             console.log(`[Analytics] Route used: ${routeName}`);
+        },
+
+        /**
+         * Track congestion alerts for crowd density warnings
+         * @param {string} zoneId - Zone identifier
+         * @param {number} densityLevel - Density level percent
+         */
+        trackCongestionAlert: (zoneId, densityLevel) => {
+            AnalyticsManager.trackEvent('congestion_alert', {
+                zone_id: zoneId,
+                density_level: densityLevel
+            });
+            events.push({ event: 'congestion_alert', data: { zoneId, densityLevel }, time: Date.now() });
+            console.log(`[Analytics] Congestion alert triggered in zone: ${zoneId}`);
+        },
+
+        /**
+         * Track optimized route recommendations
+         * @param {string} routeId - Recommended route identifier
+         * @param {string} optimizationReason - Reason for optimization
+         */
+        trackRouteOptimized: (routeId, optimizationReason) => {
+            AnalyticsManager.trackEvent('route_optimized', {
+                route_id: routeId,
+                reason: optimizationReason
+            });
+            events.push({ event: 'route_optimized', data: { routeId, optimizationReason }, time: Date.now() });
+            console.log(`[Analytics] Route optimized: ${routeId}`);
         },
 
         /**

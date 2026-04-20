@@ -20,7 +20,8 @@
     <!-- Google Identity Services SDK -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <!-- Google Maps API with Visualization Library -->
-    <script src="https://maps.googleapis.com/maps/api/js?key=YOUR_KEY_PLACEHOLDER&libraries=visualization"></script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=YOUR_KEY_PLACEHOLDER&libraries=visualization" async
+        defer></script>
     <!-- Firebase SDK for Google Auth -->
     <script type="module">
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js';
@@ -60,8 +61,24 @@
 <body role="application" aria-label="SmartVenue Companion - Event Venue Navigation Application">
     <!-- Google Sign-In Integration -->
     <div id="g_id_onload" data-client_id="YOUR_ID" data-callback="handleSignIn"></div>
+
+    <!-- Google Sign-In button -->
+    <div id="google-signin-container" class="google-signin-container">
+        <button id="google-signin-btn" class="glass google-signin-btn" aria-label="Sign in with Google">
+            <i class="fa-brands fa-google"></i> Sign in with Google
+        </button>
+    </div>
+
     <!-- Skip to main content accessibility link -->
     <a href="#main-content" class="skip-link">Skip to main content</a>
+
+    <!-- Real-time heatmap view -->
+    <section id="real-time-heatmap" class="heatmap-panel" aria-label="Real-time Crowd Heatmap">
+        <h2>Real-time Crowd Heatmap</h2>
+        <div id="google-map" class="map-container" role="application" aria-label="Google Maps heatmap visualization">
+        </div>
+    </section>
+
     <div id="nebula-bg">
         <div class="blob blob-1"></div>
         <div class="blob blob-2"></div>

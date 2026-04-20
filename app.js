@@ -214,17 +214,19 @@ function initGoogleAuth() {
     try {
         if (typeof window.firebaseAuth !== 'undefined') {
             const { auth, provider, signInWithPopup } = window.firebaseAuth;
+            let loginBtn = document.getElementById('google-signin-btn');
 
-            // Add login button event listener
-            const loginBtn = document.createElement('button');
-            loginBtn.id = 'google-login-btn';
-            loginBtn.className = 'glass';
-            loginBtn.innerHTML = '<i class="fa-solid fa-sign-in"></i> Sign in with Google';
-            loginBtn.style.display = 'none'; // Hidden initially, show when needed
+            if (!loginBtn) {
+                loginBtn = document.createElement('button');
+                loginBtn.id = 'google-signin-btn';
+                loginBtn.className = 'glass';
+                loginBtn.innerHTML = '<i class="fa-solid fa-sign-in"></i> Sign in with Google';
+                loginBtn.style.display = 'none'; // Hidden initially, show when needed
 
-            const headerActions = document.querySelector('.header-actions');
-            if (headerActions) {
-                headerActions.appendChild(loginBtn);
+                const headerActions = document.querySelector('.header-actions');
+                if (headerActions) {
+                    headerActions.appendChild(loginBtn);
+                }
             }
 
             loginBtn.addEventListener('click', async () => {
@@ -298,39 +300,53 @@ function updateUserUI(user) {
  * @param {Object} response - Google Sign-In response
  */
 function handleCredentialResponse(response) {
-    // Decode the JWT token
-    const responsePayload = decodeJwtResponse(response.credential);
+    try {
+        const responsePayload = decodeJwtResponse(response.credential);
 
-    // Update system state
-    systemState.user = {
-        id: responsePayload.sub,
-        name: responsePayload.name,
-        email: responsePayload.email,
-        picture: responsePayload.picture
-    };
+        systemState.user = {
+            id: responsePayload.sub,
+            name: responsePayload.name,
+            email: responsePayload.email,
+            picture: responsePayload.picture
+        };
 
-    // Update UI
-    updateUserUI(systemState.user);
+        updateUserUI(systemState.user);
 
-    // Track authentication event
-    if (typeof AnalyticsManager !== 'undefined') {
-        AnalyticsManager.trackCustomEvent('google_signin_success', {
-            user_id: responsePayload.sub,
-            method: 'google_identity_services'
+        if (typeof AnalyticsManager !== 'undefined') {
+            AnalyticsManager.trackEvent('google_signin_success', {
+                user_id: responsePayload.sub,
+                method: 'google_identity_services'
+            });
+        }
+
+        showAlert({
+            title: 'Welcome!',
+            message: `Signed in as ${responsePayload.name}`,
+            type: 'info'
         });
+
+        console.log('[SmartVenue] Google Sign-In successful:', responsePayload.name);
+    } catch (error) {
+        reportErrorToAnalytics(error, 'handle_credential_response');
     }
-
-    showAlert({
-        title: 'Welcome!',
-        message: `Signed in as ${responsePayload.name}`,
-        type: 'info'
-    });
-
-    console.log('[SmartVenue] Google Sign-In successful:', responsePayload.name);
 }
 
-// Make function globally available for GSI callback
+/**
+ * Handle raw Google Auth responses from Google Identity Services
+ * @param {Object} response - Google Identity Services response object
+ * @returns {void}
+ */
+function handleGoogleAuthResponse(response) {
+    try {
+        handleCredentialResponse(response);
+    } catch (error) {
+        reportErrorToAnalytics(error, 'handle_google_auth_response');
+    }
+}
+
+// Make functions globally available for GSI callback
 window.handleCredentialResponse = handleCredentialResponse;
+window.handleSignIn = handleGoogleAuthResponse;
 
 /**
  * Decode JWT response from Google Identity Services
@@ -374,39 +390,37 @@ window.addEventListener('unhandledrejection', (event) => {
 });
 
 /**
- * Initialize Google Maps with heatmap visualization
- * Creates a new google.maps.Map instance connected to Digital Twin logic
+ * Initialize the stadium map and crowd heatmap layer.
+ * @returns {void}
  */
-function initGoogleMaps() {
+function initStadiumMap() {
     try {
-        // Check if Google Maps API is loaded
-        if (typeof google === 'undefined' || !google.maps) {
-            console.warn('[SmartVenue] Google Maps API not loaded');
+        if (typeof google === 'undefined' || !google.maps || !google.maps.visualization) {
+            console.warn('[SmartVenue] Google Maps API is not available');
             return;
         }
 
-        // Create map container if it doesn't exist
         let mapContainer = document.getElementById('google-map');
         if (!mapContainer) {
             mapContainer = document.createElement('div');
             mapContainer.id = 'google-map';
+            mapContainer.className = 'map-container';
             mapContainer.style.width = '100%';
-            mapContainer.style.height = '400px';
-            mapContainer.style.borderRadius = '12px';
-            mapContainer.style.overflow = 'hidden';
-
-            // Insert after the digital twin container
-            const digitalTwin = document.getElementById('digital-twin');
-            if (digitalTwin) {
-                digitalTwin.parentNode.insertBefore(mapContainer, digitalTwin.nextSibling);
+            mapContainer.style.height = '480px';
+            mapContainer.style.borderRadius = '16px';
+            mapContainer.style.boxShadow = '0 20px 60px rgba(0,0,0,0.25)';
+            const heatmapSection = document.getElementById('real-time-heatmap');
+            if (heatmapSection) {
+                heatmapSection.appendChild(mapContainer);
             }
         }
 
-        // Initialize Google Map
         const mapOptions = {
-            center: { lat: 40.7505, lng: -73.9934 }, // Madison Square Garden coordinates
+            center: { lat: 40.7505, lng: -73.9934 },
             zoom: 18,
             mapTypeId: google.maps.MapTypeId.ROADMAP,
+            disableDefaultUI: true,
+            zoomControl: true,
             styles: [
                 {
                     featureType: 'poi',
@@ -416,18 +430,16 @@ function initGoogleMaps() {
         };
 
         const map = new google.maps.Map(mapContainer, mapOptions);
-
-        // Create heatmap layer for crowd density
-        const heatmapData = [
-            new google.maps.LatLng(40.7505, -73.9934), // Main entrance
-            new google.maps.LatLng(40.7508, -73.9930), // Secondary entrance
-            new google.maps.LatLng(40.7502, -73.9938), // Food court area
+        const stepLocations = [
+            new google.maps.LatLng(40.7505, -73.9934),
+            new google.maps.LatLng(40.7507, -73.9932),
+            new google.maps.LatLng(40.7503, -73.9937)
         ];
 
         const heatmap = new google.maps.visualization.HeatmapLayer({
-            data: heatmapData,
+            data: stepLocations,
             map: map,
-            radius: 20,
+            radius: 24,
             opacity: 0.6,
             gradient: [
                 'rgba(0, 255, 255, 0)',
@@ -436,26 +448,27 @@ function initGoogleMaps() {
                 'rgba(0, 127, 255, 1)',
                 'rgba(0, 63, 255, 1)',
                 'rgba(0, 0, 255, 1)',
-                'rgba(0, 0, 223, 1)',
-                'rgba(0, 0, 191, 1)',
-                'rgba(0, 0, 159, 1)',
-                'rgba(0, 0, 127, 1)',
-                'rgba(63, 0, 91, 1)',
-                'rgba(127, 0, 63, 1)',
-                'rgba(191, 0, 31, 1)',
                 'rgba(255, 0, 0, 1)'
             ]
         });
 
-        // Store map reference for Digital Twin integration
         window.venueMap = map;
         window.crowdHeatmap = heatmap;
+        console.log('[SmartVenue] Stadium map initialized successfully');
 
-        console.log('[SmartVenue] Google Maps initialized with heatmap visualization');
-
-        // Update heatmap with real-time crowd data
         updateHeatmapFromML();
+    } catch (error) {
+        reportErrorToAnalytics(error, 'init_stadium_map');
+    }
+}
 
+/**
+ * Initialize Google Maps with heatmap visualization
+ * @returns {void}
+ */
+function initGoogleMaps() {
+    try {
+        initStadiumMap();
     } catch (error) {
         reportErrorToAnalytics(error, 'init_google_maps');
     }
@@ -498,8 +511,12 @@ function initGoogleMapsFeatures() {
         if (typeof google !== 'undefined' && google.maps) {
             initGoogleMaps();
         } else {
-            // Wait for Google Maps API to load
-            window.initGoogleMapsCallback = initGoogleMaps;
+            const mapLoadInterval = setInterval(() => {
+                if (typeof google !== 'undefined' && google.maps) {
+                    clearInterval(mapLoadInterval);
+                    initGoogleMaps();
+                }
+            }, 250);
         }
 
         // Initialize Google Auth if available
@@ -875,9 +892,9 @@ function trapFocusInModal(modal) {
     }
 
     /**
-     * Initialize Google Maps integration with indoor routing
+     * Initialize the stadium map with indoor routing and heatmap
      */
-    function initGoogleMaps() {
+    function initStadiumMap() {
         if (typeof google === 'undefined') {
             console.warn('[SmartVenue] Google Maps API not loaded');
             return;
@@ -1029,7 +1046,7 @@ function trapFocusInModal(modal) {
             if (svgMap) svgMap.classList.add('hidden');
             if (googleMap) googleMap.classList.remove('hidden');
             if (googleMap && !googleMap.hasChildNodes()) {
-                initGoogleMaps();
+                initStadiumMap();
             }
         } else {
             if (svgMap) svgMap.classList.remove('hidden');

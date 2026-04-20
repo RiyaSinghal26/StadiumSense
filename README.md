@@ -207,7 +207,8 @@ This project is lightweight, blazing fast, and designed with zero dependencies t
 * **Core**: HTML5, Vanilla JavaScript (ES6+), DOM Manipulation
 * **Styling**: Vanilla CSS3, CSS Grid/Flexbox, Custom CSS Variables
 * **Assets**: FontAwesome (Icons), Google Fonts (Outfit)
-* **Architecture**: Mobile-first, responsive, and completely frontend-driven.
+* **Primary Infrastructure**: Google Cloud Platform (GCP) with Cloud Run, Firebase Hosting, Analytics, and Logging
+* **Architecture**: Mobile-first, responsive, and cloud-native
 * **Testing**: Custom assertion-based test framework (NEW)
 * **Analytics**: Google Analytics 4 (NEW)
 

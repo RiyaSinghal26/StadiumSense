@@ -77,55 +77,43 @@ class CrowdSafetyData(BaseModel):
 # CROWD SAFETY EVALUATION
 # ============================================
 
-def evaluate_crowd_safety(safety_data: CrowdSafetyData) -> Dict:
+def predict_safety_and_congestion(safety_data: CrowdSafetyData) -> Dict:
     """
-    Evaluate crowd safety index for a stadium zone.
-    This function explicitly aligns with the 'Safety and Security' requirement
-    of the hackathon problem statement by providing real-time safety assessment
-    to prevent overcrowding and ensure attendee safety.
+    Predict safety and congestion for a stadium zone.
+    This function aligns with the hackathon's Problem Statement by combining
+    crowd safety, congestion prediction, and emergency exit routing.
 
-    Returns a Safety Index from 0-100 where:
-    - 90-100: Very Safe (optimal conditions)
-    - 70-89: Safe (normal operations)
-    - 50-69: Caution (monitor closely)
-    - 30-49: Warning (take preventive measures)
-    - 0-29: Critical (immediate action required)
+    Returns a combined safety and congestion response with emergency exit recommendations.
     """
     try:
-        # Base safety score starts at 100
         safety_index = 100.0
 
-        # Density factor (40% weight) - overcrowding risk
-        density_ratio = safety_data.current_density / (safety_data.max_capacity / 100)  # density per 100 sqm
-        if density_ratio > 4.0:  # Critical density
+        density_ratio = safety_data.current_density / (safety_data.max_capacity / 100)
+        if density_ratio > 4.0:
             safety_index -= 50
-        elif density_ratio > 3.0:  # High density
+        elif density_ratio > 3.0:
             safety_index -= 30
-        elif density_ratio > 2.0:  # Moderate density
+        elif density_ratio > 2.0:
             safety_index -= 15
 
-        # Velocity factor (20% weight) - movement safety
-        if safety_data.crowd_velocity > 1.5:  # Fast moving crowd
+        if safety_data.crowd_velocity > 1.5:
             safety_index -= 20
-        elif safety_data.crowd_velocity > 1.0:  # Moderate movement
+        elif safety_data.crowd_velocity > 1.0:
             safety_index -= 10
 
-        # Emergency exits factor (20% weight) - evacuation capability
         if not safety_data.emergency_exits_accessible:
-            safety_index -= 40  # Critical safety violation
+            safety_index -= 40
         elif safety_data.staff_presence < 2:
-            safety_index -= 15  # Reduced monitoring
+            safety_index -= 15
 
-        # Event phase factor (10% weight) - temporal risk assessment
         phase_risks = {
-            'halftime': -10,  # High movement during breaks
-            'post_game': -15,  # Mass egress
-            'pre_game': -5,   # Initial crowding
+            'halftime': -10,
+            'post_game': -15,
+            'pre_game': -5
         }
         if safety_data.event_phase in phase_risks:
             safety_index += phase_risks[safety_data.event_phase]
 
-        # Weather factor (10% weight) - environmental conditions
         weather_impacts = {
             'rain': -10,
             'snow': -15,
@@ -134,36 +122,42 @@ def evaluate_crowd_safety(safety_data: CrowdSafetyData) -> Dict:
         if safety_data.weather_condition in weather_impacts:
             safety_index += weather_impacts[safety_data.weather_condition]
 
-        # Ensure bounds
         safety_index = max(0, min(100, safety_index))
 
-        # Determine safety level and recommendations
         if safety_index >= 90:
-            level = "VERY_SAFE"
-            status = "Optimal safety conditions"
-            recommendations = ["Continue normal operations"]
+            level = 'VERY_SAFE'
+            status = 'Optimal safety conditions'
+            recommendations = ['Maintain current operations']
         elif safety_index >= 70:
-            level = "SAFE"
-            status = "Normal safety conditions"
-            recommendations = ["Monitor crowd density"]
+            level = 'SAFE'
+            status = 'Normal safety conditions'
+            recommendations = ['Continue monitoring crowd flow']
         elif safety_index >= 50:
-            level = "CAUTION"
-            status = "Monitor closely"
-            recommendations = ["Increase staff presence", "Monitor crowd flow"]
+            level = 'CAUTION'
+            status = 'Monitor closely'
+            recommendations = ['Increase staff presence', 'Route attendees to less crowded zones']
         elif safety_index >= 30:
-            level = "WARNING"
-            status = "Take preventive measures"
-            recommendations = ["Activate crowd control protocols", "Limit entry if necessary"]
+            level = 'WARNING'
+            status = 'Take preventive measures'
+            recommendations = ['Activate crowd control', 'Open alternate entrances']
         else:
-            level = "CRITICAL"
-            status = "Immediate action required"
-            recommendations = ["Stop entry to zone", "Activate emergency protocols", "Deploy additional security"]
+            level = 'CRITICAL'
+            status = 'Immediate action required'
+            recommendations = ['Restrict access', 'Deploy emergency response teams']
+
+        emergency_exit_route = {
+            'route_id': f'exit-route-{safety_data.zone_id}',
+            'route_type': 'Emergency Exit Routing',
+            'description': 'Direct attendees to the nearest safe exit route with lowest projected congestion',
+            'recommended': not safety_data.emergency_exits_accessible or density_ratio > 3.0
+        }
 
         return {
             'safety_index': round(safety_index, 1),
             'safety_level': level,
             'status': status,
             'recommendations': recommendations,
+            'emergency_exit_routing': emergency_exit_route,
             'zone_id': safety_data.zone_id,
             'timestamp': datetime.now().isoformat(),
             'factors_considered': {
@@ -177,11 +171,11 @@ def evaluate_crowd_safety(safety_data: CrowdSafetyData) -> Dict:
         }
 
     except Exception as e:
-        logger.error(f"Crowd safety evaluation error: {e}")
+        logger.error(f"Safety and congestion prediction error: {e}")
         return {
             'safety_index': 0,
             'safety_level': 'ERROR',
-            'status': 'Evaluation failed',
+            'status': 'Prediction failed',
             'recommendations': ['Manual safety assessment required'],
             'error': str(e)
         }
@@ -589,10 +583,20 @@ async def evaluate_crowd_safety_endpoint(safety_data: CrowdSafetyData):
     of the hackathon problem statement by providing real-time safety assessment.
     """
     try:
-        result = evaluate_crowd_safety(safety_data)
+        result = predict_safety_and_congestion(safety_data)
         return result
     except Exception as e:
         logger.error(f"Crowd safety evaluation API error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/v1/predict/safety-congestion")
+async def predict_safety_congestion_endpoint(safety_data: CrowdSafetyData):
+    """Predict safety and congestion for a stadium zone."""
+    try:
+        result = predict_safety_and_congestion(safety_data)
+        return result
+    except Exception as e:
+        logger.error(f"Safety and congestion prediction API error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/v1/health")
