@@ -4,7 +4,8 @@ STADIUMSENSE - ML ENGINE (PYTHON)
 ============================================
 
 File: ml-engine/main.py
-FastAPI-based machine learning microservice
+FastAPI-based machine learning microservice for AI-driven wait time reduction
+in stadium environments through predictive crowd analytics and queue optimization.
 """
 
 import json
@@ -67,6 +68,10 @@ class SensorData(BaseModel):
 # ============================================
 
 class QueuePredictionModel:
+    """
+    Machine learning model for predicting queue wait times to enable proactive
+    wait time reduction strategies in stadium environments.
+    """
     def __init__(self):
         """Initialize queue prediction model"""
         self.model = None
@@ -155,6 +160,10 @@ class QueuePredictionModel:
 # ============================================
 
 class CrowdDensityLSTM:
+    """
+    LSTM-based model for forecasting crowd density patterns to optimize
+    wait times and prevent congestion in high-traffic stadium areas.
+    """
     def __init__(self, sequence_length: int = 60):
         """Initialize LSTM model for crowd density forecasting"""
         self.sequence_length = sequence_length
@@ -380,7 +389,7 @@ class StaffOptimizer:
 
 app = FastAPI(
     title="StadiumSense ML Engine",
-    description="AI-powered predictions and analytics for stadium management",
+    description="AI-powered predictions and analytics for stadium wait time reduction and crowd management",
     version="1.0.0"
 )
 

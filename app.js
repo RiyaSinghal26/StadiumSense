@@ -1,6 +1,6 @@
 /**
  * SmartVenue Companion V2.0
- * @fileoverview Core application logic with AI-powered venue navigation
+ * @fileoverview Core application logic with AI-powered venue navigation and Google Services integration
  * @author SmartVenue Development Team
  * @version 2.0
  * @license MIT
@@ -30,6 +30,19 @@ const SECURITY_CONFIG = {
     enableCSP: true,
     enableXSSProtection: true,
     sanitizeInput: true
+};
+
+/**
+ * Google Services configuration
+ * @const {Object}
+ */
+const GOOGLE_CONFIG = {
+    apiKey: 'YOUR_API_KEY', // Replace with actual API key
+    firebaseConfig: {
+        apiKey: "YOUR_FIREBASE_API_KEY",
+        authDomain: "YOUR_PROJECT.firebaseapp.com",
+        projectId: "YOUR_PROJECT_ID"
+    }
 };
 
 // ============================================
@@ -80,7 +93,9 @@ let systemState = {
     staffLocations: [
         { x: 150, y: 100, type: 'security' },
         { x: 250, y: 200, type: 'cleaning' }
-    ]
+    ],
+    user: null, // For Google Auth
+    currentRoute: null // For tracking routes
 };
 
 // ============================================
@@ -148,16 +163,133 @@ function safeGetElement(id) {
 }
 
 /**
- * Safe JSON parse
- * @param {string} jsonString - JSON string
- * @returns {Object|null} Parsed object or null
+ * Fetch queue data from ML engine API
+ * @returns {Promise<Array>} Queue data
  */
-function safeJsonParse(jsonString) {
+async function fetchQueueData() {
     try {
-        return JSON.parse(jsonString);
+        // Simulate API call to ML engine
+        // In production, replace with actual API endpoint
+        const response = await fetch('http://localhost:5000/api/v1/predict/queue-wait', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                current_queue_length: 10,
+                service_rate: 2.0,
+                hour_of_day: new Date().getHours(),
+                day_of_week: new Date().getDay(),
+                event_phase: 2, // first_half
+                weather_code: 1,
+                historical_avg_wait: 15,
+                staff_count: 5,
+                zone_capacity_pct: 70,
+                time_since_last_event: 30
+            })
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            // Update queues with predicted data
+            return queues.map(q => ({
+                ...q,
+                time: Math.round(data.predicted_wait_minutes),
+                status: data.predicted_wait_minutes < 5 ? 'smooth' : data.predicted_wait_minutes < 15 ? 'busy' : 'congested'
+            }));
+        }
     } catch (error) {
-        reportErrorToAnalytics(error, 'JSON_PARSE');
-        return null;
+        reportErrorToAnalytics(error, 'fetch_queue_data');
+    }
+
+    // Fallback to hardcoded data
+    return queues;
+}
+
+/**
+ * Initialize Google Authentication
+ * @function
+ */
+function initGoogleAuth() {
+    try {
+        if (typeof window.firebaseAuth !== 'undefined') {
+            const { auth, provider, signInWithPopup } = window.firebaseAuth;
+
+            // Add login button event listener
+            const loginBtn = document.createElement('button');
+            loginBtn.id = 'google-login-btn';
+            loginBtn.className = 'glass';
+            loginBtn.innerHTML = '<i class="fa-solid fa-sign-in"></i> Sign in with Google';
+            loginBtn.style.display = 'none'; // Hidden initially, show when needed
+
+            const headerActions = document.querySelector('.header-actions');
+            if (headerActions) {
+                headerActions.appendChild(loginBtn);
+            }
+
+            loginBtn.addEventListener('click', async () => {
+                try {
+                    const result = await signInWithPopup(auth, provider);
+                    systemState.user = result.user;
+                    updateUserUI(result.user);
+                    showAlert({
+                        title: 'Welcome!',
+                        message: `Signed in as ${result.user.displayName}`,
+                        type: 'info'
+                    });
+                    if (typeof AnalyticsManager !== 'undefined') {
+                        AnalyticsManager.trackCustomEvent('google_auth_success', { user_id: result.user.uid });
+                    }
+                } catch (error) {
+                    reportErrorToAnalytics(error, 'google_auth');
+                    showAlert({
+                        title: 'Sign-in Failed',
+                        message: 'Please try again or check your connection.',
+                        type: 'warning'
+                    });
+                }
+            });
+
+            // Check if user is already signed in
+            auth.onAuthStateChanged((user) => {
+                if (user) {
+                    systemState.user = user;
+                    updateUserUI(user);
+                } else {
+                    systemState.user = null;
+                    updateUserUI(null);
+                }
+            });
+
+            console.log('[SmartVenue] Google Auth initialized');
+        } else {
+            console.warn('[SmartVenue] Firebase Auth not loaded');
+        }
+    } catch (error) {
+        reportErrorToAnalytics(error, 'init_google_auth');
+    }
+}
+
+/**
+ * Update UI based on user authentication state
+ * @param {Object|null} user - Firebase user object or null
+ */
+function updateUserUI(user) {
+    const loginBtn = document.getElementById('google-login-btn');
+    const userProfile = document.querySelector('.user-profile');
+
+    if (user) {
+        if (loginBtn) loginBtn.style.display = 'none';
+        if (userProfile) {
+            userProfile.querySelector('img').src = user.photoURL || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(user.displayName) + '&background=0D8ABC&color=fff';
+            userProfile.querySelector('.seat-info span').textContent = `Welcome, ${user.displayName}`;
+        }
+    } else {
+        if (loginBtn) loginBtn.style.display = 'block';
+        if (userProfile) {
+            userProfile.querySelector('img').src = 'https://ui-avatars.com/api/?name=User&background=0D8ABC&color=fff';
+            userProfile.querySelector('.seat-info span').textContent = 'Section 104 • Row G • Seat 12';
+        }
     }
 }
 
@@ -369,6 +501,7 @@ function trapFocusInModal(modal) {
             initCommandPalette();
             initTiltEffect();
             initEliteFeatures();
+            initGoogleAuth(); // Initialize Google Authentication
 
             initLazyLoadAssets();
 
@@ -414,15 +547,18 @@ function trapFocusInModal(modal) {
     // ============================================
 
     /**
-     * Initialize queue display with live data
+     * Initialize queue display with live data from ML engine
      * @function
      */
-    function initQueues() {
+    async function initQueues() {
         try {
             const list = document.getElementById('queue-list');
-            list.innerHTML = ''; // Clear existing
+            list.innerHTML = '<div class="loading">Loading queue predictions...</div>'; // Loading state
 
-            queues.forEach(q => {
+            const queueData = await fetchQueueData();
+            list.innerHTML = ''; // Clear loading
+
+            queueData.forEach(q => {
                 const item = document.createElement('div');
                 item.className = 'queue-item';
                 item.dataset.status = q.status;
@@ -441,6 +577,11 @@ function trapFocusInModal(modal) {
             </div>
         `;
                 list.appendChild(item);
+
+                // Track queue wait time checked
+                if (typeof integrationHooks !== 'undefined' && integrationHooks.onQueueWaitTimeChecked) {
+                    integrationHooks.onQueueWaitTimeChecked(q.name, q.time);
+                }
             });
         } catch (error) {
             reportErrorToAnalytics(error, 'init_queues');
@@ -538,7 +679,7 @@ function trapFocusInModal(modal) {
     }
 
     /**
-     * Initialize Google Maps integration
+     * Initialize Google Maps integration with indoor routing
      */
     function initGoogleMaps() {
         if (typeof google === 'undefined') {
@@ -596,7 +737,88 @@ function trapFocusInModal(modal) {
             opacity: 0.6
         });
 
-        console.log('[SmartVenue] Google Maps initialized');
+        // Initialize Directions Service for indoor routing
+        const directionsService = new google.maps.DirectionsService();
+        const directionsRenderer = new google.maps.DirectionsRenderer({
+            map: map,
+            suppressMarkers: true, // We'll add custom markers
+            polylineOptions: {
+                strokeColor: '#0D8ABC',
+                strokeWeight: 6,
+                strokeOpacity: 0.8
+            }
+        });
+
+        // Store for global access
+        window.googleMaps = {
+            map,
+            directionsService,
+            directionsRenderer,
+            venueLocation
+        };
+
+        // Add click listener for routing
+        map.addListener('click', (event) => {
+            calculateIndoorRoute(event.latLng);
+        });
+
+        console.log('[SmartVenue] Google Maps with indoor routing initialized');
+    }
+
+    /**
+     * Calculate indoor route using Google Directions API
+     * @param {google.maps.LatLng} destination - Destination coordinates
+     */
+    function calculateIndoorRoute(destination) {
+        if (!window.googleMaps) return;
+
+        const { directionsService, directionsRenderer, venueLocation } = window.googleMaps;
+
+        const request = {
+            origin: venueLocation,
+            destination: destination,
+            travelMode: google.maps.TravelMode.WALKING,
+            optimizeWaypoints: true,
+            avoidHighways: true,
+            avoidTolls: true
+        };
+
+        directionsService.route(request, (result, status) => {
+            if (status === google.maps.DirectionsStatus.OK) {
+                directionsRenderer.setDirections(result);
+
+                // Extract route info
+                const route = result.routes[0];
+                const leg = route.legs[0];
+                const distance = leg.distance.text;
+                const duration = leg.duration.text;
+
+                // Track route usage
+                systemState.currentRoute = {
+                    destination: leg.end_address,
+                    distance,
+                    duration,
+                    startTime: Date.now()
+                };
+
+                showAlert({
+                    title: 'Indoor Route Calculated',
+                    message: `Distance: ${distance}, Time: ${duration}. Follow the blue path.`,
+                    type: 'info'
+                });
+
+                if (typeof integrationHooks !== 'undefined' && integrationHooks.onRouteUsage) {
+                    integrationHooks.onRouteUsage(`Indoor route to ${leg.end_address}`);
+                }
+            } else {
+                console.warn('[SmartVenue] Directions request failed:', status);
+                showAlert({
+                    title: 'Route Calculation Failed',
+                    message: 'Unable to calculate indoor route. Please try again.',
+                    type: 'warning'
+                });
+            }
+        });
     }
 
     /**
@@ -790,6 +1012,22 @@ function trapFocusInModal(modal) {
                     if (mapSection) {
                         mapSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
                     }
+
+                    // Simulate reaching destination after estimated time
+                    const routeTimeMatch = routeTime.match(/(\d+)/);
+                    if (routeTimeMatch) {
+                        const estimatedTime = parseInt(routeTimeMatch[1]);
+                        setTimeout(() => {
+                            if (typeof integrationHooks !== 'undefined' && integrationHooks.onUserReachedDestination) {
+                                integrationHooks.onUserReachedDestination(routeName, estimatedTime);
+                            }
+                            showAlert({
+                                title: 'Destination Reached!',
+                                message: `You have arrived at ${routeName}. Enjoy your visit!`,
+                                type: 'info'
+                            });
+                        }, estimatedTime * 60 * 1000); // Convert to milliseconds
+                    }
                 }
 
             });
@@ -933,6 +1171,11 @@ function trapFocusInModal(modal) {
             target.style.display = 'none';
             hud.insertAdjacentHTML('beforeend', '<div id="ar-scanning">SCANNIG ENVIRONMENT...</div>');
 
+            // Track AR enabled
+            if (typeof integrationHooks !== 'undefined' && integrationHooks.onARViewToggled) {
+                integrationHooks.onARViewToggled(true);
+            }
+
             try {
                 // Request camera
                 streamRef = await navigator.mediaDevices.getUserMedia({
@@ -963,6 +1206,11 @@ function trapFocusInModal(modal) {
                 streamRef.getTracks().forEach(track => track.stop());
                 video.srcObject = null;
                 streamRef = null;
+            }
+
+            // Track AR disabled
+            if (typeof integrationHooks !== 'undefined' && integrationHooks.onARViewToggled) {
+                integrationHooks.onARViewToggled(false);
             }
         });
     }

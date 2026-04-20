@@ -160,17 +160,55 @@ const AnalyticsManager = (() => {
         },
 
         /**
-         * Track manager mode activation
+         * Track user reached destination event
+         * @param {string} destination - Destination name
+         * @param {number} timeTaken - Time taken in minutes
          */
-        trackManagerMode: () => {
+        trackUserReachedDestination: (destination, timeTaken) => {
             if (typeof gtag !== 'function') return;
 
-            gtag('event', 'manager_mode_activated', {
+            gtag('event', 'user_reached_destination', {
+                'destination': destination,
+                'time_taken_minutes': timeTaken,
                 'timestamp': new Date().toISOString()
             });
 
-            events.push({ event: 'manager_mode_activated', time: Date.now() });
-            console.log(`[Analytics] Manager mode activated`);
+            events.push({ event: 'user_reached_destination', data: { destination, timeTaken }, time: Date.now() });
+            console.log(`[Analytics] User reached destination: ${destination} in ${timeTaken} min`);
+        },
+
+        /**
+         * Track AR view toggled event
+         * @param {boolean} enabled - Whether AR was enabled or disabled
+         */
+        trackARViewToggled: (enabled) => {
+            if (typeof gtag !== 'function') return;
+
+            gtag('event', 'ar_view_toggled', {
+                'ar_enabled': enabled,
+                'timestamp': new Date().toISOString()
+            });
+
+            events.push({ event: 'ar_view_toggled', data: { enabled }, time: Date.now() });
+            console.log(`[Analytics] AR view toggled: ${enabled ? 'enabled' : 'disabled'}`);
+        },
+
+        /**
+         * Track queue wait time checked event
+         * @param {string} queueName - Queue name
+         * @param {number} waitTime - Wait time in minutes
+         */
+        trackQueueWaitTimeChecked: (queueName, waitTime) => {
+            if (typeof gtag !== 'function') return;
+
+            gtag('event', 'queue_wait_time_checked', {
+                'queue_name': queueName,
+                'wait_time_minutes': waitTime,
+                'timestamp': new Date().toISOString()
+            });
+
+            events.push({ event: 'queue_wait_time_checked', data: { queueName, waitTime }, time: Date.now() });
+            console.log(`[Analytics] Queue wait time checked: ${queueName} - ${waitTime} min`);
         },
 
         /**
@@ -293,6 +331,27 @@ const integrationHooks = {
      */
     onManagerMode: () => {
         AnalyticsManager.trackManagerMode();
+    },
+
+    /**
+     * Called when user reaches destination
+     */
+    onUserReachedDestination: (destination, timeTaken) => {
+        AnalyticsManager.trackUserReachedDestination(destination, timeTaken);
+    },
+
+    /**
+     * Called when AR view is toggled
+     */
+    onARViewToggled: (enabled) => {
+        AnalyticsManager.trackARViewToggled(enabled);
+    },
+
+    /**
+     * Called when queue wait time is checked
+     */
+    onQueueWaitTimeChecked: (queueName, waitTime) => {
+        AnalyticsManager.trackQueueWaitTimeChecked(queueName, waitTime);
     }
 };
 
