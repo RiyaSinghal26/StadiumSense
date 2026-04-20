@@ -17,8 +17,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <!-- FontAwesome for Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Cloud SDKs are intentionally disabled in the submission build. -->
-    <!-- The app falls back to local-safe demo visualizations when keys are not configured. -->
+    <!-- Cloud SDKs are intentionally disabled in this local snapshot. -->
     <link rel="stylesheet" href="styles.css">
     <!-- Skip to main content link for accessibility -->
     <style>
@@ -40,6 +39,11 @@
 </head>
 
 <body role="application" aria-label="SmartVenue Companion - Event Venue Navigation Application">
+    <!-- Google Sign-In disabled for local submission (OAuth client not configured) -->
+    <div id="google-signin-container" class="google-signin-container" style="display:none;">
+        <!-- Sign-in removed to prevent OAuth errors during evaluation -->
+    </div>
+
     <!-- Skip to main content accessibility link -->
     <a href="#main-content" class="skip-link">Skip to main content</a>
 
@@ -154,11 +158,8 @@
                         alt="User Profile Avatar" class="avatar">
                 </div>
 
-                <button id="google-signin-btn" class="glass google-signin-btn"
-                    aria-label="Sign in with Google or demo profile">
-                    <i class="fa-brands fa-google"></i> Google Sign-In
-                </button>
-                <span id="google-auth-hint" class="google-auth-hint">Checking sign-in availability...</span>
+                <!-- Google Sign-In Button -->
+                <!-- Google One-Tap disabled for local submission -->
             </div>
         </header>
 
@@ -183,68 +184,27 @@
         <div class="stats-bar-container">
             <div class="stats-card glass">
                 <span class="stat-label">Total Occupancy</span>
-                <span class="stat-value" id="occupancy-value">68%</span>
+                <span class="stat-value">68%</span>
                 <div class="stat-progress">
-                    <div class="bar" id="occupancy-bar" style="width: 68%"></div>
+                    <div class="bar" style="width: 68%"></div>
                 </div>
             </div>
             <div class="stats-card glass">
                 <span class="stat-label">Avg. Wait Time</span>
-                <span class="stat-value" id="avg-wait-value">12m</span>
+                <span class="stat-value">12m</span>
             </div>
             <div class="stats-card glass">
                 <span class="stat-label">Security Gates</span>
-                <span class="stat-value status-green" id="security-status-value">Optimal</span>
+                <span class="stat-value status-green">Optimal</span>
             </div>
             <div class="stats-card glass">
                 <span class="stat-label">Active Alerts</span>
-                <span class="stat-value status-yellow" id="active-alerts-value">2 Live</span>
+                <span class="stat-value status-yellow">2 Live</span>
             </div>
         </div>
 
-        <section class="command-strip glass" aria-label="Venue scenario control center">
-            <div class="command-strip-header">
-                <div>
-                    <span class="command-kicker">Venue Intelligence</span>
-                    <h2>Scenario Control Center</h2>
-                    <p>Switch venue conditions live to demonstrate crowd flow, queue load, and safety response.</p>
-                </div>
-                <div class="scenario-status">
-                    <span class="status-badge" id="scenario-badge">Balanced Flow</span>
-                    <span class="status-badge subtle" id="sync-badge">Simulation Live</span>
-                </div>
-            </div>
 
-            <div class="scenario-actions" id="scenario-actions">
-                <button class="scenario-chip active" data-scenario="balanced">Balanced Flow</button>
-                <button class="scenario-chip" data-scenario="halftime">Halftime Rush</button>
-                <button class="scenario-chip" data-scenario="concessions">Concession Surge</button>
-                <button class="scenario-chip" data-scenario="family">Family Window</button>
-                <button class="scenario-chip" data-scenario="exitrush">Exit Rush</button>
-            </div>
-
-            <div class="readiness-grid">
-                <div class="readiness-item glass">
-                    <span>Auth</span>
-                    <strong id="readiness-auth">Demo Ready</strong>
-                </div>
-                <div class="readiness-item glass">
-                    <span>Maps</span>
-                    <strong id="readiness-maps">Fallback Heatmap</strong>
-                </div>
-                <div class="readiness-item glass">
-                    <span>ML Feed</span>
-                    <strong id="readiness-ml">Simulation Sync</strong>
-                </div>
-                <div class="readiness-item glass">
-                    <span>Safety Layer</span>
-                    <strong id="readiness-safety">Proactive Alerts</strong>
-                </div>
-            </div>
-        </section>
-
-
-        <main id="main-content" class="dashboard">
+        <main class="dashboard">
             <!-- Modal Container for Interactions -->
             <div id="interactive-modal" class="modal-overlay hidden">
                 <div class="modal-content glass">
@@ -358,7 +318,7 @@
                 <section class="card glass wait-times">
                     <header class="card-header">
                         <h2><i class="fa-solid fa-clock"></i> Live Queues</h2>
-                        <span class="pulse-indicator" id="queue-pulse-indicator">Live</span>
+                        <span class="pulse-indicator">Live</span>
                     </header>
                     <div class="queue-list" id="queue-list">
                         <!-- Queue items generated by JS -->
@@ -369,7 +329,7 @@
                 <section class="card glass quick-actions">
                     <header class="card-header">
                         <h2><i class="fa-solid fa-route"></i> Optimal Routes</h2>
-                        <span class="route-hint" id="route-hint-text">Click destination to view</span>
+                        <span class="route-hint">Click destination to view</span>
                     </header>
                     <div class="route-options">
                         <button class="route-btn" data-route="route-restroom"
@@ -600,10 +560,8 @@
         </div>
     </div>
 
-    <script src="config.js" defer></script>
-    <script src="analytics.js" defer></script>
-    <script src="app.js" defer></script>
-    <script src="tests.js" defer></script>
+    <script src="app.js"></script>
+    <script src="tests.js"></script>
 </body>
 
 </html>

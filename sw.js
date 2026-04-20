@@ -10,13 +10,14 @@ const DYNAMIC_CACHE = 'smartvenue-dynamic-v2.0';
 
 // Files to cache immediately
 const STATIC_FILES = [
-    '/',
-    '/index.html',
-    '/app.js',
-    '/styles.css',
-    '/analytics.js',
-    '/config.js',
-    '/tests.js',
+    './',
+    './index.html',
+    './app.js',
+    './styles.css',
+    './analytics.js',
+    './config.js',
+    './tests.js',
+    './simulation-worker.js',
     'https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap',
     'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css'
 ];
@@ -59,6 +60,11 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
     const { request } = event;
     const url = new URL(request.url);
+    const localStaticFiles = STATIC_FILES
+        .filter((file) => !file.startsWith('http'))
+        .map((file) => file.replace(/^\.\//, '/'));
+    const isStaticRequest = STATIC_FILES.includes(request.url) ||
+        localStaticFiles.some((file) => url.pathname === file || url.pathname.endsWith(file));
 
     // Skip non-GET requests and external domains
     if (request.method !== 'GET' || !url.origin.includes(self.location.origin)) {
@@ -66,7 +72,7 @@ self.addEventListener('fetch', (event) => {
     }
 
     // Cache-first strategy for static files
-    if (STATIC_FILES.some(file => request.url.includes(file))) {
+    if (isStaticRequest) {
         event.respondWith(
             caches.match(request)
                 .then((response) => {

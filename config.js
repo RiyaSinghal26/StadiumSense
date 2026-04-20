@@ -82,11 +82,24 @@ const SmartVenueConfig = {
      * Analytics configuration
      */
     ANALYTICS: {
-        GA_ID: 'G-STADIUMSENSE2026', // GA4 ID (dummy) replaced
+        GA_ID: '',
         TRACK_PAGE_VIEWS: true,
         TRACK_EVENTS: true,
         TRACK_ERRORS: true,
         SESSION_TIMEOUT: 1800000 // 30 minutes
+    },
+
+    /**
+     * External service configuration.
+     * Keep keys empty in the submission build so the app runs safely with fallbacks.
+     */
+    SERVICES: {
+        MAPS_API_KEY: '',
+        FIREBASE: {
+            apiKey: '',
+            authDomain: '',
+            projectId: ''
+        }
     },
 
     /**
@@ -175,6 +188,15 @@ const SmartVenueConfig = {
 };
 
 /**
+ * Compatibility config expected by the lightweight browser tests.
+ */
+const CONFIG = {
+    ALERT_TIMEOUT: SmartVenueConfig.TIMING.ALERT_TIMEOUT,
+    CROWD_DOT_COUNT: SmartVenueConfig.CROWD.DOT_COUNT,
+    MATCH_UPDATE_INTERVAL: SmartVenueConfig.TIMING.MATCH_UPDATE_INTERVAL
+};
+
+/**
  * Get configuration value
  * @param {string} path - Configuration path (dot notation)
  * @returns {*} Configuration value
@@ -243,7 +265,7 @@ function getProfileConfig(profileName) {
  * @returns {number} Timing in milliseconds
  */
 function getTiming(timingKey) {
-    return SmartVenueConfig.TIMING[timingKey] || APP_CONFIG.ALERT_TIMEOUT;
+    return SmartVenueConfig.TIMING[timingKey] || SmartVenueConfig.TIMING.ALERT_TIMEOUT;
 }
 
 /**
@@ -274,10 +296,23 @@ function toggleFeature(featureName, enabled) {
     logMessage(`Feature ${featureName} ${enabled ? 'enabled' : 'disabled'}`, 'INFO');
 }
 
+if (typeof window !== 'undefined') {
+    window.SmartVenueConfig = SmartVenueConfig;
+    window.CONFIG = CONFIG;
+    window.getConfig = getConfig;
+    window.setConfig = setConfig;
+    window.isFeatureEnabled = isFeatureEnabled;
+    window.getProfileConfig = getProfileConfig;
+    window.getTiming = getTiming;
+    window.logMessage = logMessage;
+    window.toggleFeature = toggleFeature;
+}
+
 // Export for module systems
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
         SmartVenueConfig,
+        CONFIG,
         getConfig,
         setConfig,
         isFeatureEnabled,

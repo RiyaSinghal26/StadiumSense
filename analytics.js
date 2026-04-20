@@ -9,19 +9,22 @@
  * Replace with your actual Google Analytics ID
  */
 (function () {
-    // Standard Google Tag (gtag.js) initialization
-    const ANALYTICS_ID = 'G-STADIUMSENSE2026'; // Google Analytics 4 ID for StadiumSense
+    const ANALYTICS_ID = (typeof getConfig === 'function' && getConfig('ANALYTICS.GA_ID')) || '';
+
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    window.gtag = gtag;
+
+    if (!ANALYTICS_ID) {
+        console.info('[Analytics] GA4 ID not configured. Running in local summary mode.');
+        return;
+    }
 
     // Load Google Tag script
     const script = document.createElement('script');
     script.async = true;
     script.src = 'https://www.googletagmanager.com/gtag/js?id=' + ANALYTICS_ID;
     document.head.appendChild(script);
-
-    // Initialize gtag
-    window.dataLayer = window.dataLayer || [];
-    function gtag() { dataLayer.push(arguments); }
-    window.gtag = gtag;
 
     gtag('js', new Date());
     gtag('config', ANALYTICS_ID, {
@@ -263,6 +266,15 @@ const AnalyticsManager = (() => {
         },
 
         /**
+         * Track manager mode activation.
+         */
+        trackManagerMode: () => {
+            AnalyticsManager.trackEvent('manager_mode_enabled', {
+                source: 'staff_dashboard'
+            });
+        },
+
+        /**
          * Get session analytics
          */
         getSessionAnalytics: () => {
@@ -331,6 +343,15 @@ const AnalyticsManager = (() => {
             }
 
             events.push({ event: 'stadium_throughput_logged', data: throughputData, time: Date.now() });
+        },
+
+        /**
+         * Print a session summary for local demos and unload hooks.
+         */
+        sendAnalyticsSummary: () => {
+            const summary = AnalyticsManager.getSessionAnalytics();
+            console.log('[Analytics] Session summary:', summary);
+            return summary;
         }
     };
 })();
@@ -438,6 +459,11 @@ const integrationHooks = {
         AnalyticsManager.logStadiumThroughput(throughputData);
     }
 };
+
+if (typeof window !== 'undefined') {
+    window.AnalyticsManager = AnalyticsManager;
+    window.integrationHooks = integrationHooks;
+}
 
 /**
  * Export for integration

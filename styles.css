@@ -449,6 +449,15 @@ body {
     display: none;
 }
 
+/* Temporarily hide the standalone heatmap panel to avoid duplicate/top-of-page rendering
+   Remove this rule if you want the heatmap visible and fixed in the layout. */
+.google-heatmap-container {
+    width: 100%;
+    height: 300px;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
 .map-container svg.stadium-map {
     transition: opacity 0.3s ease;
 }
@@ -574,6 +583,10 @@ body {
     color: var(--status-yellow);
 }
 
+.stat-value.status-red {
+    color: var(--status-red);
+}
+
 .stat-progress {
     height: 4px;
     background: rgba(255, 255, 255, 0.1);
@@ -586,6 +599,121 @@ body {
     background: var(--accent-blue);
     box-shadow: var(--glow-blue);
     border-radius: 2px;
+}
+
+.command-strip {
+    margin-bottom: 2rem;
+    padding: 1.4rem;
+    border-radius: var(--radius-lg);
+}
+
+.command-strip-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    align-items: flex-start;
+    margin-bottom: 1rem;
+}
+
+.command-strip-header h2 {
+    font-size: 1.25rem;
+    margin-bottom: 0.35rem;
+}
+
+.command-strip-header p {
+    color: var(--text-muted);
+    max-width: 720px;
+    font-size: 0.92rem;
+}
+
+.command-kicker {
+    display: inline-block;
+    margin-bottom: 0.35rem;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--accent-blue);
+    font-weight: 700;
+}
+
+.scenario-status {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.55rem 0.9rem;
+    border-radius: 999px;
+    background: rgba(56, 189, 248, 0.12);
+    border: 1px solid rgba(56, 189, 248, 0.22);
+    color: var(--accent-blue);
+    font-size: 0.78rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.status-badge.subtle {
+    color: var(--text-main);
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.12);
+}
+
+.scenario-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.scenario-chip {
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-main);
+    font-family: inherit;
+    font-size: 0.85rem;
+    font-weight: 600;
+    padding: 0.7rem 1rem;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+}
+
+.scenario-chip:hover,
+.scenario-chip.active {
+    transform: translateY(-1px);
+    background: rgba(56, 189, 248, 0.12);
+    border-color: rgba(56, 189, 248, 0.35);
+    color: var(--accent-blue);
+}
+
+.readiness-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 0.75rem;
+}
+
+.readiness-item {
+    padding: 0.85rem 1rem;
+    border-radius: var(--radius-md);
+}
+
+.readiness-item span {
+    display: block;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-muted);
+    margin-bottom: 0.4rem;
+}
+
+.readiness-item strong {
+    font-size: 0.95rem;
+    font-weight: 700;
 }
 
 
@@ -1805,7 +1933,41 @@ input:checked+.slider:before {
 .header-actions {
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
+    justify-content: flex-end;
     gap: 1rem;
+}
+
+.google-signin-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.7rem 1rem;
+    border-radius: 999px;
+    color: var(--text-main);
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.google-signin-btn i {
+    color: #fbbc04;
+}
+
+.google-auth-hint {
+    max-width: 220px;
+    font-size: 0.72rem;
+    line-height: 1.4;
+    color: var(--text-muted);
+}
+
+@media (max-width: 900px) {
+    .command-strip-header {
+        flex-direction: column;
+    }
+
+    .scenario-status {
+        justify-content: flex-start;
+    }
 }
 
 .profile-switcher,

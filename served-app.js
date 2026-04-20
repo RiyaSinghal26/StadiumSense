@@ -37,8 +37,8 @@ const SECURITY_CONFIG = {
  * @const {Object}
  */
 const GOOGLE_CONFIG = {
-    apiKey: typeof getConfig === 'function' ? (getConfig('SERVICES.MAPS_API_KEY') || '') : '',
-    firebaseConfig: typeof getConfig === 'function' ? (getConfig('SERVICES.FIREBASE') || {}) : {}
+    apiKey: '',
+    firebaseConfig: {}
 };
 
 // ============================================
@@ -76,104 +76,6 @@ const mapSectors = [
     { id: 'sector-east', baseGate: 'Gate E', currentLoad: 'Low' }
 ];
 
-const SCENARIO_PRESETS = {
-    balanced: {
-        label: 'Balanced Flow',
-        syncLabel: 'Simulation Live',
-        occupancy: 68,
-        securityLabel: 'Optimal',
-        securityClass: 'status-green',
-        alertLabel: '2 Live',
-        alertClass: 'status-yellow',
-        pulseLabel: 'Live',
-        routeHint: 'Click destination to view',
-        mapInfo: {
-            title: 'Balanced ingress and amenities',
-            detail: 'Gate S and Gate E currently offer the smoothest circulation.',
-            color: 'var(--accent-blue)'
-        },
-        queueTimes: [2, 15, 5, 25],
-        capacities: [20, 75, 40, 95],
-        sectorLoads: ['High', 'Low', 'Medium', 'Low']
-    },
-    halftime: {
-        label: 'Halftime Rush',
-        syncLabel: 'Rush Forecast',
-        occupancy: 82,
-        securityLabel: 'Monitored',
-        securityClass: 'status-yellow',
-        alertLabel: '3 Live',
-        alertClass: 'status-yellow',
-        pulseLabel: 'Rush Building',
-        routeHint: 'Restroom demand rising • route early',
-        mapInfo: {
-            title: 'Halftime pressure detected',
-            detail: 'Restrooms and central aisles are trending busy. Gate E remains the best relief path.',
-            color: 'var(--status-yellow)'
-        },
-        queueTimes: [12, 18, 11, 22],
-        capacities: [58, 80, 62, 88],
-        sectorLoads: ['High', 'Medium', 'High', 'Medium']
-    },
-    concessions: {
-        label: 'Concession Surge',
-        syncLabel: 'Spend Spike',
-        occupancy: 88,
-        securityLabel: 'Crowded',
-        securityClass: 'status-yellow',
-        alertLabel: '4 Live',
-        alertClass: 'status-red',
-        pulseLabel: 'Peak Demand',
-        routeHint: 'Express Burgers still beats the main concourse line',
-        mapInfo: {
-            title: 'Food corridor congestion',
-            detail: 'Main team store and beverage zones are saturated. Express lanes are still moving.',
-            color: 'var(--status-red)'
-        },
-        queueTimes: [6, 26, 14, 29],
-        capacities: [35, 92, 77, 98],
-        sectorLoads: ['Medium', 'Low', 'High', 'High']
-    },
-    family: {
-        label: 'Family Window',
-        syncLabel: 'Accessible Flow',
-        occupancy: 63,
-        securityLabel: 'Family Friendly',
-        securityClass: 'status-green',
-        alertLabel: '1 Advisory',
-        alertClass: 'status-green',
-        pulseLabel: 'Calm Window',
-        routeHint: 'Family lanes and stroller-friendly paths prioritized',
-        mapInfo: {
-            title: 'Low-stress routing active',
-            detail: 'Lower bowl pathways and family amenities are intentionally prioritized right now.',
-            color: 'var(--status-green)'
-        },
-        queueTimes: [4, 8, 6, 9],
-        capacities: [24, 48, 38, 42],
-        sectorLoads: ['Low', 'Low', 'Medium', 'Low']
-    },
-    exitrush: {
-        label: 'Exit Rush',
-        syncLabel: 'Safety Priority',
-        occupancy: 74,
-        securityLabel: 'Flow Control',
-        securityClass: 'status-red',
-        alertLabel: '5 Live',
-        alertClass: 'status-red',
-        pulseLabel: 'Exit Priority',
-        routeHint: 'Avoid Gate N • South and East remain fastest',
-        mapInfo: {
-            title: 'Post-match surge active',
-            detail: 'Gate N is overloaded. Exit routing now favors Gate S and Gate E.',
-            color: 'var(--status-red)'
-        },
-        queueTimes: [1, 4, 3, 5],
-        capacities: [10, 22, 15, 20],
-        sectorLoads: ['High', 'Low', 'Medium', 'Low']
-    }
-};
-
 /**
  * Application system state
  * @type {Object}
@@ -181,28 +83,14 @@ const SCENARIO_PRESETS = {
 let systemState = {
     profile: 'regular',
     mode: 'normal',
-    activeScenario: 'balanced',
     matchTime: 74,
     isListening: false,
     isInitialized: false,
-    authInitialized: false,
-    mlConnected: false,
-    mapsConnected: false,
     staffLocations: [
         { x: 150, y: 100, type: 'security' },
         { x: 250, y: 200, type: 'cleaning' }
     ],
     user: null, // For Google Auth
-    dashboardMetrics: {
-        occupancy: 68,
-        securityLabel: 'Optimal',
-        securityClass: 'status-green',
-        alertLabel: '2 Live',
-        alertClass: 'status-yellow',
-        pulseLabel: 'Live',
-        routeHint: 'Click destination to view',
-        syncLabel: 'Simulation Live'
-    },
     currentRoute: null // For tracking routes
 };
 
@@ -216,8 +104,7 @@ let systemState = {
  * @returns {string} Escaped HTML-safe text
  */
 function escapeHtml(text) {
-    if (text === null || text === undefined) return '';
-    if (!SECURITY_CONFIG.sanitizeInput || typeof text !== 'string') return String(text);
+    if (!SECURITY_CONFIG.sanitizeInput || typeof text !== 'string') return text;
 
     const map = {
         '&': '&amp;',
@@ -269,194 +156,6 @@ function safeGetElement(id) {
         console.error(`[SmartVenue] Error retrieving element: ${id}`, error);
         return null;
     }
-
-    updateReadinessPanel();
-}
-
-function getQueueStatus(time) {
-    if (time < 8) return 'smooth';
-    if (time < 18) return 'busy';
-    return 'congested';
-}
-
-function setMapInfoContent(title, detail, color = 'var(--accent-blue)') {
-    const infoBox = document.getElementById('map-info');
-    if (!infoBox) return;
-
-    infoBox.innerHTML = `
-        <h3 style="color:${color}">${escapeHtml(title)}</h3>
-        <p>${escapeHtml(detail)}</p>
-    `;
-}
-
-function updateMapSectorVisuals() {
-    mapSectors.forEach((sector) => {
-        const el = document.getElementById(sector.id);
-        if (!el) return;
-
-        if (sector.currentLoad === 'High') el.style.fill = 'rgba(239, 68, 68, 0.4)';
-        else if (sector.currentLoad === 'Medium') el.style.fill = 'rgba(245, 158, 11, 0.4)';
-        else el.style.fill = 'rgba(16, 185, 129, 0.4)';
-    });
-}
-
-function refreshQueueUI() {
-    queues.forEach((queue) => {
-        const el = document.getElementById(queue.id);
-        if (!el) return;
-
-        el.dataset.status = queue.status;
-        const timeEl = el.querySelector('.queue-time');
-        const capacityEl = el.querySelector('.cap-value');
-
-        if (timeEl) timeEl.textContent = `${queue.time} min`;
-        if (capacityEl) capacityEl.textContent = queue.capacity;
-    });
-}
-
-function updateDashboardStats() {
-    const occupancyValue = safeGetElement('occupancy-value');
-    const occupancyBar = safeGetElement('occupancy-bar');
-    const avgWaitValue = safeGetElement('avg-wait-value');
-    const securityValue = safeGetElement('security-status-value');
-    const alertsValue = safeGetElement('active-alerts-value');
-    const pulseIndicator = safeGetElement('queue-pulse-indicator');
-    const routeHint = safeGetElement('route-hint-text');
-    const scenarioBadge = safeGetElement('scenario-badge');
-    const syncBadge = safeGetElement('sync-badge');
-
-    const metrics = systemState.dashboardMetrics;
-    const avgWait = Math.round(queues.reduce((sum, queue) => sum + queue.time, 0) / queues.length);
-
-    if (occupancyValue) occupancyValue.textContent = `${metrics.occupancy}%`;
-    if (occupancyBar) occupancyBar.style.width = `${metrics.occupancy}%`;
-    if (avgWaitValue) avgWaitValue.textContent = `${avgWait}m`;
-    if (securityValue) {
-        securityValue.textContent = metrics.securityLabel;
-        securityValue.className = `stat-value ${metrics.securityClass}`;
-    }
-    if (alertsValue) {
-        alertsValue.textContent = metrics.alertLabel;
-        alertsValue.className = `stat-value ${metrics.alertClass}`;
-    }
-    if (pulseIndicator) pulseIndicator.textContent = metrics.pulseLabel;
-    if (routeHint) routeHint.textContent = metrics.routeHint;
-    if (scenarioBadge) scenarioBadge.textContent = SCENARIO_PRESETS[systemState.activeScenario]?.label || 'Simulation';
-    if (syncBadge) syncBadge.textContent = metrics.syncLabel;
-}
-
-function updateReadinessPanel() {
-    const authEl = safeGetElement('readiness-auth');
-    const mapsEl = safeGetElement('readiness-maps');
-    const mlEl = safeGetElement('readiness-ml');
-    const safetyEl = safeGetElement('readiness-safety');
-
-    if (authEl) {
-        authEl.textContent = systemState.user && systemState.user.uid !== 'demo-user'
-            ? 'Google Connected'
-            : hasFirebaseAuthConfig() ? 'OAuth Ready' : 'Demo Ready';
-    }
-
-    if (mapsEl) {
-        mapsEl.textContent = systemState.mapsConnected ? 'Maps Connected' : 'Fallback Heatmap';
-    }
-
-    if (mlEl) {
-        mlEl.textContent = systemState.mlConnected ? 'Live Predictions' : 'Simulation Sync';
-    }
-
-    if (safetyEl) {
-        safetyEl.textContent = systemState.mode === 'emergency'
-            ? 'Emergency Active'
-            : systemState.activeScenario === 'exitrush'
-                ? 'Exit Monitoring'
-                : 'Proactive Alerts';
-    }
-}
-
-function applyScenarioPreset(name, options = {}) {
-    const preset = SCENARIO_PRESETS[name];
-    if (!preset) return;
-
-    systemState.activeScenario = name;
-    systemState.mode = 'normal';
-    systemState.dashboardMetrics = {
-        occupancy: preset.occupancy,
-        securityLabel: preset.securityLabel,
-        securityClass: preset.securityClass,
-        alertLabel: preset.alertLabel,
-        alertClass: preset.alertClass,
-        pulseLabel: preset.pulseLabel,
-        routeHint: preset.routeHint,
-        syncLabel: preset.syncLabel
-    };
-
-    queues.forEach((queue, index) => {
-        queue.time = preset.queueTimes[index] ?? queue.time;
-        queue.capacity = `${preset.capacities[index] ?? parseInt(queue.capacity, 10)}%`;
-        queue.status = getQueueStatus(queue.time);
-    });
-
-    mapSectors.forEach((sector, index) => {
-        sector.currentLoad = preset.sectorLoads[index] || sector.currentLoad;
-    });
-
-    document.body.classList.remove('emergency-mode');
-    const matchTitle = document.getElementById('match-title');
-    if (matchTitle) matchTitle.textContent = 'Warriors vs. Titans';
-
-    const exitPath = document.getElementById('route-exit');
-    if (exitPath) {
-        exitPath.style.stroke = '';
-        exitPath.style.strokeWidth = '';
-    }
-
-    updateMapSectorVisuals();
-    refreshQueueUI();
-    setMapInfoContent(preset.mapInfo.title, preset.mapInfo.detail, preset.mapInfo.color);
-    updateDashboardStats();
-    updateReadinessPanel();
-
-    document.querySelectorAll('.scenario-chip').forEach((button) => {
-        button.classList.toggle('active', button.dataset.scenario === name);
-    });
-
-    if (!options.silent) {
-        showAlert({
-            title: preset.label,
-            message: preset.mapInfo.detail,
-            type: preset.securityClass === 'status-red' ? 'warning' : 'info'
-        });
-    }
-}
-
-function initScenarioControls() {
-    const buttons = document.querySelectorAll('.scenario-chip');
-    if (!buttons.length) return;
-
-    buttons.forEach((button) => {
-        button.addEventListener('click', () => {
-            applyScenarioPreset(button.dataset.scenario);
-        });
-    });
-
-    applyScenarioPreset(systemState.activeScenario, { silent: true });
-}
-
-/**
- * Append a safe text-only chat bubble.
- * @param {HTMLElement} container - Messages container
- * @param {string} role - Chat role class
- * @param {string} text - Message content
- */
-function appendChatMessage(container, role, text) {
-    if (!container) return;
-
-    const message = document.createElement('div');
-    message.className = `message ${role}`;
-    message.textContent = text;
-    container.appendChild(message);
-    container.scrollTop = container.scrollHeight;
 }
 
 /**
@@ -488,8 +187,6 @@ async function fetchQueueData() {
 
         if (response.ok) {
             const data = await response.json();
-            systemState.mlConnected = true;
-            updateReadinessPanel();
             // Update queues with predicted data
             return queues.map(q => ({
                 ...q,
@@ -498,64 +195,11 @@ async function fetchQueueData() {
             }));
         }
     } catch (error) {
-        systemState.mlConnected = false;
-        updateReadinessPanel();
         reportErrorToAnalytics(error, 'fetch_queue_data');
     }
 
     // Fallback to hardcoded data
     return queues;
-}
-
-function hasFirebaseAuthConfig() {
-    const firebaseConfig = GOOGLE_CONFIG.firebaseConfig || {};
-    return Boolean(firebaseConfig.apiKey && firebaseConfig.authDomain && firebaseConfig.projectId);
-}
-
-async function ensureFirebaseAuth() {
-    if (window.firebaseAuth || !hasFirebaseAuthConfig()) return window.firebaseAuth || null;
-
-    try {
-        const [{ initializeApp }, { getAuth, GoogleAuthProvider, onAuthStateChanged, signInWithPopup }] = await Promise.all([
-            import('https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js'),
-            import('https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js')
-        ]);
-
-        const app = initializeApp(GOOGLE_CONFIG.firebaseConfig);
-        const auth = getAuth(app);
-        const provider = new GoogleAuthProvider();
-
-        window.firebaseAuth = { auth, provider, onAuthStateChanged, signInWithPopup };
-        return window.firebaseAuth;
-    } catch (error) {
-        reportErrorToAnalytics(error, 'ensure_firebase_auth');
-        return null;
-    }
-}
-
-function createDemoUser() {
-    return {
-        uid: 'demo-user',
-        displayName: 'Demo Guest',
-        email: 'demo@smartvenue.local',
-        photoURL: 'https://ui-avatars.com/api/?name=Demo+Guest&background=0D8ABC&color=fff'
-    };
-}
-
-function handleDemoSignIn() {
-    const demoUser = createDemoUser();
-    systemState.user = demoUser;
-    updateUserUI(demoUser);
-
-    showAlert({
-        title: 'Demo Sign-In Active',
-        message: 'Google auth is not configured, so demo profile has been loaded.',
-        type: 'info'
-    });
-
-    if (typeof AnalyticsManager !== 'undefined' && AnalyticsManager.trackCustomEvent) {
-        AnalyticsManager.trackCustomEvent('demo_auth_success', { user_id: demoUser.uid });
-    }
 }
 
 /**
@@ -564,82 +208,61 @@ function handleDemoSignIn() {
  */
 function initGoogleAuth() {
     try {
-        const loginBtn = document.getElementById('google-signin-btn');
-        const authHint = document.getElementById('google-auth-hint');
-        const signInContainer = document.getElementById('google-signin-container');
+        if (typeof window.firebaseAuth !== 'undefined') {
+            const { auth, provider, signInWithPopup } = window.firebaseAuth;
+            let loginBtn = document.getElementById('google-signin-btn');
 
-        if (!loginBtn) {
-            console.warn('[SmartVenue] Google Sign-In button not found');
-            return;
-        }
+            if (!loginBtn) {
+                loginBtn = document.createElement('button');
+                loginBtn.id = 'google-signin-btn';
+                loginBtn.className = 'glass';
+                loginBtn.innerHTML = '<i class="fa-solid fa-sign-in"></i> Sign in with Google';
+                loginBtn.style.display = 'none'; // Hidden initially, show when needed
 
-        if (signInContainer) {
-            signInContainer.style.display = 'none';
-        }
+                const headerActions = document.querySelector('.header-actions');
+                if (headerActions) {
+                    headerActions.appendChild(loginBtn);
+                }
+            }
 
-        loginBtn.style.display = 'inline-flex';
-
-        if (!systemState.authInitialized) {
             loginBtn.addEventListener('click', async () => {
-                const firebaseAuth = await ensureFirebaseAuth();
-
-                if (firebaseAuth) {
-                    try {
-                        const { auth, provider, signInWithPopup } = firebaseAuth;
-                        const result = await signInWithPopup(auth, provider);
-                        systemState.user = result.user;
-                        updateUserUI(result.user);
-                        showAlert({
-                            title: 'Welcome!',
-                            message: `Signed in as ${result.user.displayName}`,
-                            type: 'info'
-                        });
-                        if (typeof AnalyticsManager !== 'undefined') {
-                            AnalyticsManager.trackCustomEvent('google_auth_success', { user_id: result.user.uid });
-                        }
-                    } catch (error) {
-                        reportErrorToAnalytics(error, 'google_auth');
-                        showAlert({
-                            title: 'Sign-in Failed',
-                            message: 'Google popup could not complete. Falling back to demo profile.',
-                            type: 'warning'
-                        });
-                        handleDemoSignIn();
+                try {
+                    const result = await signInWithPopup(auth, provider);
+                    systemState.user = result.user;
+                    updateUserUI(result.user);
+                    showAlert({
+                        title: 'Welcome!',
+                        message: `Signed in as ${result.user.displayName}`,
+                        type: 'info'
+                    });
+                    if (typeof AnalyticsManager !== 'undefined') {
+                        AnalyticsManager.trackCustomEvent('google_auth_success', { user_id: result.user.uid });
                     }
-                } else {
-                    handleDemoSignIn();
+                } catch (error) {
+                    reportErrorToAnalytics(error, 'google_auth');
+                    showAlert({
+                        title: 'Sign-in Failed',
+                        message: 'Please try again or check your connection.',
+                        type: 'warning'
+                    });
                 }
             });
 
-            systemState.authInitialized = true;
+            // Check if user is already signed in
+            auth.onAuthStateChanged((user) => {
+                if (user) {
+                    systemState.user = user;
+                    updateUserUI(user);
+                } else {
+                    systemState.user = null;
+                    updateUserUI(null);
+                }
+            });
+
+            console.log('[SmartVenue] Google Auth initialized');
+        } else {
+            console.warn('[SmartVenue] Firebase Auth not loaded');
         }
-
-        ensureFirebaseAuth().then((firebaseAuth) => {
-            if (firebaseAuth && firebaseAuth.auth && typeof firebaseAuth.onAuthStateChanged === 'function') {
-                firebaseAuth.onAuthStateChanged((user) => {
-                    if (user) {
-                        systemState.user = user;
-                        updateUserUI(user);
-                    } else if (!systemState.user || systemState.user.uid !== 'demo-user') {
-                        systemState.user = null;
-                        updateUserUI(null);
-                    }
-                });
-            }
-        });
-
-        if (authHint) {
-            authHint.textContent = hasFirebaseAuthConfig()
-                ? 'Google sign-in is enabled for this build.'
-                : 'Google sign-in is running in demo mode until Firebase keys are added.';
-        }
-
-        loginBtn.innerHTML = hasFirebaseAuthConfig()
-            ? '<i class="fa-brands fa-google"></i> Sign in with Google'
-            : '<i class="fa-brands fa-google"></i> Google Sign-In Demo';
-
-        updateUserUI(systemState.user);
-        console.log('[SmartVenue] Google Auth initialized');
     } catch (error) {
         reportErrorToAnalytics(error, 'init_google_auth');
     }
@@ -650,28 +273,17 @@ function initGoogleAuth() {
  * @param {Object|null} user - Firebase user object or null
  */
 function updateUserUI(user) {
-    const loginBtn = document.getElementById('google-signin-btn');
-    const authHint = document.getElementById('google-auth-hint');
+    const loginBtn = document.getElementById('google-login-btn');
     const userProfile = document.querySelector('.user-profile');
 
     if (user) {
         if (loginBtn) loginBtn.style.display = 'none';
-        if (authHint) {
-            authHint.textContent = user.uid === 'demo-user'
-                ? 'Demo profile active. Add Firebase keys in config.js for real Google OAuth.'
-                : 'Signed in with Google.';
-        }
         if (userProfile) {
             userProfile.querySelector('img').src = user.photoURL || user.picture || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(user.displayName || user.name) + '&background=0D8ABC&color=fff';
             userProfile.querySelector('.seat-info span').textContent = `Welcome, ${user.displayName || user.name}`;
         }
     } else {
         if (loginBtn) loginBtn.style.display = 'block';
-        if (authHint) {
-            authHint.textContent = hasFirebaseAuthConfig()
-                ? 'Google sign-in is enabled for this build.'
-                : 'Google sign-in is running in demo mode until Firebase keys are added.';
-        }
         if (userProfile) {
             userProfile.querySelector('img').src = 'https://ui-avatars.com/api/?name=User&background=0D8ABC&color=fff';
             userProfile.querySelector('.seat-info span').textContent = 'Section 104 • Row G • Seat 12';
@@ -688,7 +300,6 @@ function handleCredentialResponse(response) {
         const responsePayload = decodeJwtResponse(response.credential);
 
         systemState.user = {
-            uid: responsePayload.sub,
             id: responsePayload.sub,
             name: responsePayload.name,
             email: responsePayload.email,
@@ -1027,8 +638,6 @@ async function fetchSafetyMetrics() {
 
         if (response.ok) {
             const safety = await response.json();
-            systemState.mlConnected = true;
-            updateReadinessPanel();
 
             // Log safety metrics for analytics
             if (typeof AnalyticsManager !== 'undefined') {
@@ -1082,8 +691,6 @@ async function fetchSafetyMetrics() {
             return safety;
         }
     } catch (error) {
-        systemState.mlConnected = false;
-        updateReadinessPanel();
         reportErrorToAnalytics(error, 'fetch_safety_metrics');
     }
 }
@@ -1161,7 +768,7 @@ function initSimulationWorker() {
     crowdWorker.postMessage({
         type: 'initialize',
         points,
-        queues: queues.map((q) => ({ id: q.id, time: q.time, status: q.status, capacity: q.capacity }))
+        queues: queues.map((q) => ({ id: q.id, time: q.time, status: q.status }))
     });
 }
 
@@ -1189,11 +796,10 @@ function updateQueueTimesFromWorker(waitTimes) {
 
     waitTimes.forEach(({ id, time, status, capacity }) => {
         const queue = queues.find((item) => item.id === id);
-        const nextCapacity = capacity || queue?.capacity || '0%';
         if (queue) {
             queue.time = time;
             queue.status = status;
-            queue.capacity = nextCapacity;
+            queue.capacity = capacity;
         }
 
         const el = document.getElementById(id);
@@ -1201,12 +807,10 @@ function updateQueueTimesFromWorker(waitTimes) {
             const timeEl = el.querySelector('.queue-time');
             const capEl = el.querySelector('.cap-value');
             if (timeEl) timeEl.textContent = `${time} min`;
-            if (capEl) capEl.textContent = nextCapacity;
+            if (capEl) capEl.textContent = `${capacity}`;
             el.dataset.status = status;
         }
     });
-
-    updateDashboardStats();
 }
 
 function initLazyLoadAssets() {
@@ -1295,7 +899,6 @@ function trapFocusInModal(modal) {
         try {
             console.log('[SmartVenue] Initializing application v' + APP_CONFIG.VERSION);
 
-            initScenarioControls();
             initQueues();
             initMapInteractions();
             initRouteButtons();
@@ -1315,7 +918,6 @@ function trapFocusInModal(modal) {
             initEliteFeatures();
             initGoogleAuth(); // Initialize Google Authentication
             initGoogleMapsFeatures(); // Initialize Google Maps features with ML integration
-            updateReadinessPanel();
 
             initLazyLoadAssets();
 
@@ -1330,7 +932,7 @@ function trapFocusInModal(modal) {
 
             // Register service worker for PWA functionality
             if ('serviceWorker' in navigator) {
-                navigator.serviceWorker.register('sw.js')
+                navigator.serviceWorker.register('/sw.js')
                     .then((registration) => {
                         console.log('[SmartVenue] Service Worker registered:', registration.scope);
                     })
@@ -1397,8 +999,6 @@ function trapFocusInModal(modal) {
                     integrationHooks.onQueueWaitTimeChecked(q.name, q.time);
                 }
             });
-
-            updateDashboardStats();
         } catch (error) {
             reportErrorToAnalytics(error, 'init_queues');
         }
@@ -1428,8 +1028,6 @@ function trapFocusInModal(modal) {
                 el.querySelector('.cap-value').textContent = `${capNum}%`;
             }
         });
-
-        updateDashboardStats();
     }
 
     // --- Map Interaction --- //
@@ -1467,7 +1065,12 @@ function trapFocusInModal(modal) {
             });
 
             // Simulate changing color on map to match load
-            updateMapSectorVisuals();
+            const data = mapSectors.find(s => s.id === sector.id);
+            if (data) {
+                if (data.currentLoad === 'High') sector.style.fill = 'rgba(239, 68, 68, 0.4)';
+                else if (data.currentLoad === 'Medium') sector.style.fill = 'rgba(245, 158, 11, 0.4)';
+                else sector.style.fill = 'rgba(16, 185, 129, 0.4)';
+            }
         });
 
         // Periodically change map colors to simulate live network
@@ -1488,7 +1091,6 @@ function trapFocusInModal(modal) {
                     }
                 }
             });
-            updateDashboardStats();
         }, 10000);
     }
 
@@ -1663,18 +1265,8 @@ function toggleMapType() {
  * @function
  */
 function initGoogleMapsFeatures() {
-    const mapToggle = document.getElementById('map-type-toggle');
-
-    if (typeof google === 'undefined' || !google.maps || !google.maps.visualization) {
-        console.warn('[SmartVenue] Google Maps API not configured - using fallback visualizations');
-        systemState.mapsConnected = false;
-        updateReadinessPanel();
-        if (mapToggle) {
-            mapToggle.checked = false;
-            mapToggle.disabled = true;
-            mapToggle.setAttribute('aria-disabled', 'true');
-            mapToggle.title = 'Google Maps disabled in submission build';
-        }
+    if (typeof google === 'undefined') {
+        console.warn('[SmartVenue] Google Maps API not loaded - features unavailable');
         return;
     }
 
@@ -1683,8 +1275,6 @@ function initGoogleMapsFeatures() {
     const mapElement = document.getElementById('google-map');
 
     if (!mapElement) return;
-    systemState.mapsConnected = true;
-    updateReadinessPanel();
 
     // Initialize google.maps.Map (production-ready simulation)
     const map = new google.maps.Map(mapElement, {
@@ -1737,8 +1327,6 @@ function initGoogleMapsFeatures() {
     }).catch(error => {
         console.error('[SmartVenue] Failed to load crowd density:', error);
     });
-
-    fetchSafetyMetrics();
 }
 
 /**
@@ -1757,8 +1345,6 @@ async function fetchCrowdDensityFromML() {
 
         if (response.ok) {
             const data = await response.json();
-            systemState.mlConnected = true;
-            updateReadinessPanel();
             // Convert forecast to heatmap points
             return data.forecast.map((density, index) => ({
                 lat: 40.7505 + (Math.random() - 0.5) * 0.01,
@@ -1767,8 +1353,6 @@ async function fetchCrowdDensityFromML() {
             }));
         }
     } catch (error) {
-        systemState.mlConnected = false;
-        updateReadinessPanel();
         console.error('[SmartVenue] ML crowd density fetch failed:', error);
     }
 
@@ -1812,7 +1396,7 @@ function showAlert(alertData) {
     try {
         const title = escapeHtml(alertData.title || 'Alert');
         const message = escapeHtml(alertData.message || '');
-        const type = ['warning', 'critical'].includes(alertData.type) ? alertData.type : 'info';
+        const type = alertData.type === 'warning' ? 'warning' : 'info';
         const toast = document.createElement('div');
         toast.className = 'alert-toast';
         toast.setAttribute('role', 'status');
@@ -1824,10 +1408,6 @@ function showAlert(alertData) {
         let iconColor = 'var(--accent-blue)';
 
         if (type === 'warning') {
-            iconClass = 'fa-solid fa-triangle-exclamation';
-            borderColor = 'var(--status-red)';
-            iconColor = 'var(--status-red)';
-        } else if (type === 'critical') {
             iconClass = 'fa-solid fa-triangle-exclamation';
             borderColor = 'var(--status-red)';
             iconColor = 'var(--status-red)';
@@ -1908,10 +1488,6 @@ function joinQueue(btn, name) {
     if (name.toLowerCase().includes('burger')) {
         startInSeatOrdering(name);
     }
-
-    if (typeof integrationHooks !== 'undefined' && integrationHooks.onQueueJoin) {
-        integrationHooks.onQueueJoin(name);
-    }
 }
 
 
@@ -1942,8 +1518,7 @@ function initRouteButtons() {
             if (targetPath) {
                 targetPath.classList.remove('hidden');
 
-                const routeName = btn.querySelector('.route-details span:first-child')?.textContent?.trim() || 'Selected route';
-                const routeTime = btn.querySelector('.route-time')?.textContent?.trim() || '';
+                let routeName = btn.querySelector('.route-details span:first-child').innerText;
                 showAlert({
                     title: 'Live Route Active',
                     message: `Displaying the optimal path for: ${routeName}. Follow the glowing line.`,
@@ -1952,17 +1527,13 @@ function initRouteButtons() {
 
                 const infoBox = document.getElementById('map-info');
                 infoBox.innerHTML = `
-                    <h3 style="color: var(--accent-blue)"><i class="fa-solid fa-location-arrow"></i> Routing Active</h3>
-                    <p>${escapeHtml(routeName)} Path Displayed</p>
-                `;
+            < h3 style = "color: var(--accent-blue)" > <i class="fa-solid fa-location-arrow"></i> Routing Active</h3 >
+                <p>${routeName} Path Displayed</p>
+        `;
 
                 const mapSection = document.querySelector('.interactive-map');
                 if (mapSection) {
                     mapSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                }
-
-                if (typeof integrationHooks !== 'undefined' && integrationHooks.onRouteUsage) {
-                    integrationHooks.onRouteUsage(routeName);
                 }
 
                 // Simulate reaching destination after estimated time
@@ -2001,8 +1572,6 @@ function initModal() {
 function openModal(data) {
     const modal = document.getElementById('interactive-modal');
     const modalBody = document.getElementById('modal-body');
-    const baseGate = escapeHtml(data.baseGate || 'Venue zone');
-    const currentLoad = escapeHtml(data.currentLoad || 'Low');
 
     let color = "var(--status-green)";
     let icon = "fa-check-circle";
@@ -2019,14 +1588,14 @@ function openModal(data) {
     }
 
     modalBody.innerHTML = `
-        <h2 class="modal-title" style="color: ${color}">
-            <i class="fa-solid ${icon}"></i> ${baseGate} Zone
-        </h2>
-        <p style="margin-bottom: 1.5rem; color: var(--text-muted)">Detailed current operations layout around the ${baseGate} sector.</p>
+            < h2 class="modal-title" style = "color: ${color}" >
+                <i class="fa-solid ${icon}"></i> ${data.baseGate} Zone
+        </h2 >
+        <p style="margin-bottom: 1.5rem; color: var(--text-muted)">Detailed current operations layout around the ${data.baseGate} sector.</p>
         
         <div class="modal-stat">
             <span>Overall Congestion</span>
-            <span style="color: ${color}">${currentLoad}</span>
+            <span style="color: ${color}">${data.currentLoad}</span>
         </div>
         <div class="modal-stat">
             <span>Security Est. Wait</span>
@@ -2074,8 +1643,9 @@ function initAIChatbot() {
         if (!text) return;
 
         // Add User message
-        appendChatMessage(messagesEl, 'user', text);
+        messagesEl.innerHTML += `<div class="message user">${text}</div>`;
         input.value = '';
+        messagesEl.scrollTop = messagesEl.scrollHeight;
 
         // Simulate Bot thinking & responding
         setTimeout(() => {
@@ -2090,11 +1660,8 @@ function initAIChatbot() {
                 response = "For the fastest exit right now, avoid Gate N (High Congestion). Head towards Gate S or E.";
             }
 
-            appendChatMessage(messagesEl, 'bot', response);
-
-            if (typeof integrationHooks !== 'undefined' && integrationHooks.onChatBot) {
-                integrationHooks.onChatBot(text, response);
-            }
+            messagesEl.innerHTML += `<div class="message bot">${response}</div>`;
+            messagesEl.scrollTop = messagesEl.scrollHeight;
 
             // Add a subtle "ping" sound simulation (visual)
             const fab = document.getElementById('ai-fab');
@@ -2123,15 +1690,9 @@ function initARSimulator() {
         arOverlay.classList.remove('hidden');
         const hud = arOverlay.querySelector('.ar-hud');
         const target = arOverlay.querySelector('.ar-target');
-        const existingScanner = document.getElementById('ar-scanning');
 
         target.style.display = 'none';
-        if (existingScanner) existingScanner.remove();
-
-        const scanner = document.createElement('div');
-        scanner.id = 'ar-scanning';
-        scanner.textContent = 'SCANNING ENVIRONMENT...';
-        hud.appendChild(scanner);
+        hud.insertAdjacentHTML('beforeend', '<div id="ar-scanning">SCANNIG ENVIRONMENT...</div>');
 
         // Track AR enabled
         if (typeof integrationHooks !== 'undefined' && integrationHooks.onARViewToggled) {
@@ -2318,7 +1879,7 @@ function startInSeatOrdering(itemName) {
     setTimeout(() => {
         steps[2].classList.remove('active');
         steps[2].classList.add('completed');
-        msg.innerHTML = '<span style="color: var(--status-green); font-weight: 700;">Order Arrived!</span> Enjoy your meal.';
+        msg.innerHTML = `< span style = "color: var(--status-green); font-weight: 700;" > Order Arrived!</span > Enjoy your meal.`;
 
         showAlert({
             title: 'Order Delivered',
@@ -2565,10 +2126,6 @@ function initEliteFeatures() {
                 type: 'info'
             });
             showHapticFeedback();
-
-            if (typeof integrationHooks !== 'undefined' && integrationHooks.onProfileChange) {
-                integrationHooks.onProfileChange(systemState.profile);
-            }
         });
     }
 
@@ -2582,10 +2139,6 @@ function initEliteFeatures() {
                 document.querySelector('.map-container').classList.add('digital-twin-active');
                 showStaffOnMap();
                 showAlert({ title: 'Manager Mode Active', message: 'Staff coordination and digital twin analytics unlocked.', type: 'info' });
-
-                if (typeof integrationHooks !== 'undefined' && integrationHooks.onManagerMode) {
-                    integrationHooks.onManagerMode();
-                }
             } else {
                 managerPanel.classList.add('hidden');
                 document.querySelector('.map-container').classList.remove('digital-twin-active');
@@ -2643,17 +2196,6 @@ function triggerEmergencyMode() {
     systemState.mode = 'emergency';
     document.body.classList.add('emergency-mode');
     showHapticFeedback();
-    systemState.dashboardMetrics.securityLabel = 'Evacuating';
-    systemState.dashboardMetrics.securityClass = 'status-red';
-    systemState.dashboardMetrics.alertLabel = 'Emergency';
-    systemState.dashboardMetrics.alertClass = 'status-red';
-    systemState.dashboardMetrics.pulseLabel = 'Priority';
-    systemState.dashboardMetrics.routeHint = 'Safety path locked to Gate S';
-    systemState.dashboardMetrics.syncLabel = 'Emergency Mode';
-
-    if (typeof integrationHooks !== 'undefined' && integrationHooks.onEmergency) {
-        integrationHooks.onEmergency();
-    }
 
     // Safety Priority: Clear distractions
     document.getElementById('alert-banner-container').innerHTML = '';
@@ -2678,9 +2220,6 @@ function triggerEmergencyMode() {
     // Convert signage into instructions
     const matchTitle = document.getElementById('match-title');
     if (matchTitle) matchTitle.innerText = "EVACUATE NOW - GO TO GATE S";
-    setMapInfoContent('Emergency routing active', 'Floor guidance now prioritizes Gate S and secondary overflow to Gate E.', 'var(--status-red)');
-    updateDashboardStats();
-    updateReadinessPanel();
 }
 
 // Feature 9: Multi-Modal (Voice Simulation)
