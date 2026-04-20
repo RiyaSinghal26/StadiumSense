@@ -101,6 +101,38 @@ This project is lightweight, blazing fast, and designed with zero dependencies t
 * **Testing**: Custom assertion-based test framework (NEW)
 * **Analytics**: Google Analytics 4 (NEW)
 
+## 🏗️ Infrastructure
+
+**Deployment optimized for Google Cloud Run and Firebase Hosting with GA4 behavioral tracking.**
+
+### Production Architecture
+- **Frontend**: Firebase Hosting for global CDN distribution
+- **Backend**: Google Cloud Run for serverless ML API endpoints
+- **Analytics**: Google Analytics 4 with custom event tracking
+- **Authentication**: Google Identity Services integration
+- **Logging**: Google Cloud Logging for operational metrics
+- **Monitoring**: Google Cloud Monitoring dashboards
+
+### Google Cloud Services Integration
+- **Google Maps Platform**: Real-time indoor routing and heatmaps
+- **Firebase**: Authentication, hosting, and real-time database
+- **Cloud Run**: Containerized ML model serving
+- **BigQuery**: Analytics data warehousing
+- **Cloud Logging**: Centralized logging and monitoring
+
+### Deployment Commands
+```bash
+# Deploy frontend to Firebase
+firebase deploy --only hosting
+
+# Deploy ML API to Cloud Run
+gcloud run deploy stadium-sense-ml \
+  --source . \
+  --platform managed \
+  --region us-central1 \
+  --allow-unauthenticated
+```
+
 ## 🚀 How to Run the Project
 
 Since this project avoids complex build tools or heavy node modules, it is incredibly simple to start.

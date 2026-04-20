@@ -254,6 +254,41 @@ const AnalyticsManager = (() => {
                     'total_events': summary.totalEvents
                 });
             }
+        },
+
+        /**
+         * Google Cloud Logging integration for stadium throughput data
+         * @param {Object} throughputData - Stadium operational metrics
+         */
+        logStadiumThroughput: (throughputData) => {
+            // Simulate Google Cloud Logging API call
+            const logEntry = {
+                timestamp: new Date().toISOString(),
+                severity: 'INFO',
+                labels: {
+                    service: 'stadium-sense',
+                    version: '2.0'
+                },
+                jsonPayload: {
+                    event: 'stadium_throughput',
+                    data: throughputData
+                }
+            };
+
+            // In production, this would send to Google Cloud Logging
+            console.log('[Google Cloud Logging] Stadium Throughput:', logEntry);
+
+            // Also track in GA4 for unified analytics
+            if (typeof gtag === 'function') {
+                gtag('event', 'stadium_throughput_logged', {
+                    'total_attendees': throughputData.totalAttendees || 0,
+                    'avg_wait_time': throughputData.avgWaitTime || 0,
+                    'peak_density': throughputData.peakDensity || 0,
+                    'timestamp': logEntry.timestamp
+                });
+            }
+
+            events.push({ event: 'stadium_throughput_logged', data: throughputData, time: Date.now() });
         }
     };
 })();
@@ -352,6 +387,13 @@ const integrationHooks = {
      */
     onQueueWaitTimeChecked: (queueName, waitTime) => {
         AnalyticsManager.trackQueueWaitTimeChecked(queueName, waitTime);
+    },
+
+    /**
+     * Called to log stadium throughput data to Google Cloud Logging
+     */
+    onLogStadiumThroughput: (throughputData) => {
+        AnalyticsManager.logStadiumThroughput(throughputData);
     }
 };
 

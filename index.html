@@ -36,6 +36,8 @@
 
         window.firebaseAuth = { auth, provider, signInWithPopup };
     </script>
+    <!-- Google Identity Services SDK -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
     <link rel="stylesheet" href="styles.css">
     <!-- Skip to main content link for accessibility -->
     <style>
@@ -167,6 +169,12 @@
                     <img src="https://ui-avatars.com/api/?name=User&background=0D8ABC&color=fff"
                         alt="User Profile Avatar" class="avatar">
                 </div>
+
+                <!-- Google Sign-In Button -->
+                <div id="g_id_onload" data-client_id="YOUR_GOOGLE_CLIENT_ID" data-context="signin" data-ux_mode="popup"
+                    data-callback="handleCredentialResponse" data-auto_prompt="false">
+                </div>
+                <div class="g_id_signin" data-type="standard"></div>
             </div>
         </header>
 
