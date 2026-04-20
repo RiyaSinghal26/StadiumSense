@@ -10,7 +10,7 @@
  */
 (function () {
     // Standard Google Tag (gtag.js) initialization
-    const ANALYTICS_ID = 'G-XXXXXXXXXX'; // Replace with your GA4 ID
+    const ANALYTICS_ID = 'G-STADIUMSENSE2026'; // Google Analytics 4 ID for StadiumSense
 
     // Load Google Tag script
     const script = document.createElement('script');

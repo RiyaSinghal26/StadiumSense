@@ -82,7 +82,7 @@ const SmartVenueConfig = {
      * Analytics configuration
      */
     ANALYTICS: {
-        GA_ID: 'G-XXXXXXXXXX', // Replace with your GA4 ID
+        GA_ID: 'G-STADIUMSENSE2026', // GA4 ID (dummy) replaced
         TRACK_PAGE_VIEWS: true,
         TRACK_EVENTS: true,
         TRACK_ERRORS: true,

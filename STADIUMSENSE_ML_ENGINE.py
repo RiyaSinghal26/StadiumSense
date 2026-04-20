@@ -25,6 +25,7 @@ from sklearn.metrics import mean_squared_error, r2_score
 
 # FastAPI
 from fastapi import FastAPI, HTTPException, BackgroundTasks
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import uvicorn
 
@@ -510,6 +511,22 @@ app = FastAPI(
     version="1.0.0"
 )
 
+# ============================================
+# CORS CONFIGURATION
+# ============================================
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:8000",
+        "http://127.0.0.1:8000",
+        "http://localhost:5000",
+        "http://127.0.0.1:5000"
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 # Initialize models
 queue_model = QueuePredictionModel()
 crowd_lstm = CrowdDensityLSTM()
@@ -518,6 +535,62 @@ anomaly_detector = AnomalyDetector()
 # ============================================
 # API ENDPOINTS
 # ============================================
+
+@app.get("/api/v1/predict/crowd-density")
+async def get_crowd_density_heatmap():
+    """
+    Get crowd density heatmap data for Google Maps visualization.
+    Returns 50-100 coordinate points simulating real-time crowd hotspots.
+    This endpoint is critical for the heatmap to work in the frontend.
+    """
+    try:
+        # Generate realistic crowd density points around stadium
+        # Simulate typical crowd distribution patterns
+        base_lat, base_lng = 40.7505, -73.9934
+        
+        # Create hotspots based on event phase
+        hotspots = []
+        
+        # Main entrance area (high density)
+        for i in range(25):
+            lat = base_lat + np.random.uniform(-0.0008, 0.0008)
+            lng = base_lng + np.random.uniform(-0.0005, 0.0005)
+            weight = np.random.uniform(0.6, 1.0)  # High intensity
+            hotspots.append({"lat": round(lat, 6), "lng": round(lng, 6), "weight": weight})
+        
+        # Concession area (medium density)
+        for i in range(20):
+            lat = base_lat + np.random.uniform(0.001, 0.002)
+            lng = base_lng + np.random.uniform(0.0005, 0.0015)
+            weight = np.random.uniform(0.4, 0.7)  # Medium intensity
+            hotspots.append({"lat": round(lat, 6), "lng": round(lng, 6), "weight": weight})
+        
+        # Restrooms area (medium-low density)
+        for i in range(15):
+            lat = base_lat + np.random.uniform(-0.0015, -0.0005)
+            lng = base_lng + np.random.uniform(0.001, 0.002)
+            weight = np.random.uniform(0.3, 0.6)  # Medium-low intensity
+            hotspots.append({"lat": round(lat, 6), "lng": round(lng, 6), "weight": weight})
+        
+        # Seating areas (scattered low density)
+        for i in range(15):
+            lat = base_lat + np.random.uniform(-0.002, 0.002)
+            lng = base_lng + np.random.uniform(-0.002, 0.002)
+            weight = np.random.uniform(0.2, 0.4)  # Low intensity
+            hotspots.append({"lat": round(lat, 6), "lng": round(lng, 6), "weight": weight})
+        
+        logger.info(f"Generated {len(hotspots)} crowd density heatmap points")
+        
+        return {
+            "status": "success",
+            "density_points": hotspots,
+            "timestamp": datetime.now().isoformat(),
+            "total_points": len(hotspots),
+            "event_phase": "second_half"
+        }
+    except Exception as e:
+        logger.error(f"Crowd density heatmap error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/v1/predict/queue-wait")
 async def predict_queue_wait(queue_data: QueueData):

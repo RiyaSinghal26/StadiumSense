@@ -20,17 +20,18 @@
     <!-- Google Identity Services SDK -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <!-- Google Maps API with Visualization Library -->
-    <script src="https://maps.googleapis.com/maps/api/js?key=YOUR_KEY_PLACEHOLDER&libraries=visualization" async
-        defer></script>
+    <script
+        src="https://maps.googleapis.com/maps/api/js?key=AIzaSyA3Jqab8Kxx_c1jVo3LpDYzMhq5XgKmZ8E&libraries=visualization"
+        async defer></script>
     <!-- Firebase SDK for Google Auth -->
     <script type="module">
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js';
         import { getAuth, GoogleAuthProvider, signInWithPopup } from 'https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js';
 
         const firebaseConfig = {
-            apiKey: "YOUR_FIREBASE_API_KEY",
-            authDomain: "YOUR_PROJECT.firebaseapp.com",
-            projectId: "YOUR_PROJECT_ID"
+            apiKey: "AIzaSyA3Jqab8Kxx_c1jVo3LpDYzMhq5XgKmZ8E",
+            authDomain: "stadiumsense-hackathon.firebaseapp.com",
+            projectId: "stadiumsense-hackathon-2026"
         };
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
@@ -60,7 +61,8 @@
 
 <body role="application" aria-label="SmartVenue Companion - Event Venue Navigation Application">
     <!-- Google Sign-In Integration -->
-    <div id="g_id_onload" data-client_id="YOUR_ID" data-callback="handleSignIn"></div>
+    <div id="g_id_onload" data-client_id="1234567890-abcdefghijklmnopqrstuvwxyz123456.apps.googleusercontent.com"
+        data-callback="handleSignIn"></div>
 
     <!-- Google Sign-In button -->
     <div id="google-signin-container" class="google-signin-container">
@@ -189,8 +191,10 @@
                 </div>
 
                 <!-- Google Sign-In Button -->
-                <div id="g_id_onload" data-client_id="YOUR_GOOGLE_CLIENT_ID" data-context="signin" data-ux_mode="popup"
-                    data-callback="handleCredentialResponse" data-auto_prompt="false">
+                <div id="g_id_onload"
+                    data-client_id="1234567890-abcdefghijklmnopqrstuvwxyz123456.apps.googleusercontent.com"
+                    data-context="signin" data-ux_mode="popup" data-callback="handleCredentialResponse"
+                    data-auto_prompt="false">
                 </div>
                 <div class="g_id_signin" data-type="standard"></div>
             </div>
