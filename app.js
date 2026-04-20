@@ -373,6 +373,147 @@ window.addEventListener('unhandledrejection', (event) => {
     reportErrorToAnalytics(event.reason || 'Unhandled rejection', 'unhandled_rejection');
 });
 
+/**
+ * Initialize Google Maps with heatmap visualization
+ * Creates a new google.maps.Map instance connected to Digital Twin logic
+ */
+function initGoogleMaps() {
+    try {
+        // Check if Google Maps API is loaded
+        if (typeof google === 'undefined' || !google.maps) {
+            console.warn('[SmartVenue] Google Maps API not loaded');
+            return;
+        }
+
+        // Create map container if it doesn't exist
+        let mapContainer = document.getElementById('google-map');
+        if (!mapContainer) {
+            mapContainer = document.createElement('div');
+            mapContainer.id = 'google-map';
+            mapContainer.style.width = '100%';
+            mapContainer.style.height = '400px';
+            mapContainer.style.borderRadius = '12px';
+            mapContainer.style.overflow = 'hidden';
+
+            // Insert after the digital twin container
+            const digitalTwin = document.getElementById('digital-twin');
+            if (digitalTwin) {
+                digitalTwin.parentNode.insertBefore(mapContainer, digitalTwin.nextSibling);
+            }
+        }
+
+        // Initialize Google Map
+        const mapOptions = {
+            center: { lat: 40.7505, lng: -73.9934 }, // Madison Square Garden coordinates
+            zoom: 18,
+            mapTypeId: google.maps.MapTypeId.ROADMAP,
+            styles: [
+                {
+                    featureType: 'poi',
+                    stylers: [{ visibility: 'off' }]
+                }
+            ]
+        };
+
+        const map = new google.maps.Map(mapContainer, mapOptions);
+
+        // Create heatmap layer for crowd density
+        const heatmapData = [
+            new google.maps.LatLng(40.7505, -73.9934), // Main entrance
+            new google.maps.LatLng(40.7508, -73.9930), // Secondary entrance
+            new google.maps.LatLng(40.7502, -73.9938), // Food court area
+        ];
+
+        const heatmap = new google.maps.visualization.HeatmapLayer({
+            data: heatmapData,
+            map: map,
+            radius: 20,
+            opacity: 0.6,
+            gradient: [
+                'rgba(0, 255, 255, 0)',
+                'rgba(0, 255, 255, 1)',
+                'rgba(0, 191, 255, 1)',
+                'rgba(0, 127, 255, 1)',
+                'rgba(0, 63, 255, 1)',
+                'rgba(0, 0, 255, 1)',
+                'rgba(0, 0, 223, 1)',
+                'rgba(0, 0, 191, 1)',
+                'rgba(0, 0, 159, 1)',
+                'rgba(0, 0, 127, 1)',
+                'rgba(63, 0, 91, 1)',
+                'rgba(127, 0, 63, 1)',
+                'rgba(191, 0, 31, 1)',
+                'rgba(255, 0, 0, 1)'
+            ]
+        });
+
+        // Store map reference for Digital Twin integration
+        window.venueMap = map;
+        window.crowdHeatmap = heatmap;
+
+        console.log('[SmartVenue] Google Maps initialized with heatmap visualization');
+
+        // Update heatmap with real-time crowd data
+        updateHeatmapFromML();
+
+    } catch (error) {
+        reportErrorToAnalytics(error, 'init_google_maps');
+    }
+}
+
+/**
+ * Update heatmap data from ML engine predictions
+ */
+async function updateHeatmapFromML() {
+    try {
+        const response = await fetch('http://localhost:5000/api/v1/predict/crowd-density', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                timestamp: new Date().toISOString(),
+                event_phase: 'second_half',
+                attendance: 19500,
+                weather_condition: 'clear'
+            })
+        });
+
+        if (response.ok && window.crowdHeatmap) {
+            const data = await response.json();
+            const heatmapData = data.density_points.map(point =>
+                new google.maps.LatLng(point.lat, point.lng)
+            );
+            window.crowdHeatmap.setData(heatmapData);
+        }
+    } catch (error) {
+        console.warn('[SmartVenue] Could not update heatmap from ML:', error);
+    }
+}
+
+/**
+ * Initialize Google Maps features with ML integration
+ */
+function initGoogleMapsFeatures() {
+    try {
+        // Initialize Google Maps if API is loaded
+        if (typeof google !== 'undefined' && google.maps) {
+            initGoogleMaps();
+        } else {
+            // Wait for Google Maps API to load
+            window.initGoogleMapsCallback = initGoogleMaps;
+        }
+
+        // Initialize Google Auth if available
+        if (window.firebaseAuth) {
+            initGoogleAuth();
+        }
+
+        console.log('[SmartVenue] Google Maps features initialized');
+
+    } catch (error) {
+        reportErrorToAnalytics(error, 'init_google_maps_features');
+    }
+}
+
 function createSimulationWorker() {
     if (!window.Worker) {
         console.warn('[SmartVenue] Web Workers are not supported in this browser');

@@ -5,21 +5,31 @@
  */
 
 /**
- * Initialize Google Analytics 4
+ * Initialize Google Analytics 4 with standard Google Tag (gtag.js)
  * Replace with your actual Google Analytics ID
  */
 (function () {
-    // Google Analytics script injection
+    // Standard Google Tag (gtag.js) initialization
     const ANALYTICS_ID = 'G-XXXXXXXXXX'; // Replace with your GA4 ID
 
-    // Inject GA script
+    // Load Google Tag script
+    const script = document.createElement('script');
+    script.async = true;
+    script.src = 'https://www.googletagmanager.com/gtag/js?id=' + ANALYTICS_ID;
+    document.head.appendChild(script);
+
+    // Initialize gtag
     window.dataLayer = window.dataLayer || [];
     function gtag() { dataLayer.push(arguments); }
+    window.gtag = gtag;
+
     gtag('js', new Date());
     gtag('config', ANALYTICS_ID, {
-        'page_path': window.location.pathname,
-        'page_title': document.title
+        'page_title': document.title,
+        'page_location': window.location.href
     });
+
+    console.log('[Analytics] Google Tag (gtag.js) initialized with ID:', ANALYTICS_ID);
 })();
 
 /**
@@ -242,18 +252,26 @@ const AnalyticsManager = (() => {
         },
 
         /**
-         * Send analytics summary
+         * Generic event tracking function using window.gtag
+         * @param {string} eventName - Event name
+         * @param {Object} parameters - Event parameters
          */
-        sendAnalyticsSummary: () => {
-            const summary = AnalyticsManager.getSessionAnalytics();
-            console.log('[Analytics] Session Summary:', summary);
-
-            if (typeof gtag === 'function') {
-                gtag('event', 'session_summary', {
-                    'session_duration': summary.sessionDuration,
-                    'total_events': summary.totalEvents
-                });
+        trackEvent: (eventName, parameters = {}) => {
+            if (typeof window.gtag !== 'function') {
+                console.warn('[Analytics] gtag not available, logging to console');
+                console.log(`[Analytics] Event: ${eventName}`, parameters);
+                return;
             }
+
+            // Ensure timestamp is included
+            const eventParams = {
+                ...parameters,
+                timestamp: new Date().toISOString()
+            };
+
+            window.gtag('event', eventName, eventParams);
+            events.push({ event: eventName, data: parameters, time: Date.now() });
+            console.log(`[Analytics] Event tracked: ${eventName}`, parameters);
         },
 
         /**
