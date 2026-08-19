@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmartVenue Companion</title>
+    <meta name="description" content="Enhance your physical event experience with real-time crowd movement tracking, wait times, and coordination.">
+    <!-- Google Fonts for modern typography -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="nebula-bg">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+        <div class="blob blob-3"></div>
+    </div>
+    <div class="bg-blur"></div>
+
+    <!-- Digital Ticket Wallet -->
+    <div id="ticket-action-area">
+        <button id="view-ticket-btn" class="glass"><i class="fa-solid fa-ticket"></i> View Digital Ticket</button>
+    </div>
+    
+    <div id="ticket-modal" class="modal-overlay hidden">
+        <!-- Ticket Seat POV Button -->
+        <button id="view-pov-btn" class="glass"><i class="fa-solid fa-eye"></i> See My View</button>
+        <div class="ticket-card-wrapper">
+
+            <div class="ticket-card glass">
+                <div class="ticket-top">
+                    <div class="match-info">
+                        <span class="league">CHAMPIONS LEAGUE</span>
+                        <h2 id="match-title">Warriors vs. Titans</h2>
+                    </div>
+                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=SMARTVENUE-104-G-12" alt="Ticket QR" class="qr-code">
+                </div>
+                <div class="ticket-divider"></div>
+                <div class="ticket-bottom">
+                    <div class="ticket-stat">
+                        <span>GATE</span>
+                        <span class="val">NORTH</span>
+                    </div>
+                    <div class="ticket-stat">
+                        <span>SECTION</span>
+                        <span class="val">104</span>
+                    </div>
+                    <div class="ticket-stat">
+                        <span>ROW</span>
+                        <span class="val">G</span>
+                    </div>
+                    <div class="ticket-stat">
+                        <span>SEAT</span>
+                        <span class="val">12</span>
+                    </div>
+                </div>
+            </div>
+            <button class="close-ticket-btn glass"><i class="fa-solid fa-xmark"></i> Close</button>
+        </div>
+    </div>
+
+    <div class="app-container">
+
+        <!-- Header -->
+        <header class="top-nav">
+            <div class="logo">
+                <i class="fa-solid fa-stadium"></i>
+                <h1>SmartVenue</h1>
+            </div>
+
+            <!-- New: Efficiency Command Palette -->
+            <div class="search-commander glass">
+                <i class="fa-solid fa-terminal"></i>
+                <input type="text" id="global-search" placeholder="Type command (e.g. 'find food' or 'exit route')">
+                <kbd>/</kbd>
+            </div>
+
+            <div class="user-profile">
+                <div class="seat-info">
+                    <span class="label">Section 104 • Row G • Seat 12</span>
+                </div>
+                <img src="https://ui-avatars.com/api/?name=User&background=0D8ABC&color=fff" alt="User Profile" class="avatar">
+            </div>
+        </header>
+
+        <!-- Live Match Stats Widget -->
+        <div class="match-stats-widget glass">
+            <div class="team team-a">
+                <span class="team-name">Warriors</span>
+                <span class="score">2</span>
+            </div>
+            <div class="match-time">
+                <span class="timer">74'</span>
+                <span class="status">Live</span>
+            </div>
+            <div class="team team-b">
+                <span class="score">1</span>
+                <span class="team-name">Titans</span>
+            </div>
+        </div>
+
+        <!-- New: Venue Health Dashboard -->
+
+        <div class="stats-bar-container">
+            <div class="stats-card glass">
+                <span class="stat-label">Total Occupancy</span>
+                <span class="stat-value">68%</span>
+                <div class="stat-progress"><div class="bar" style="width: 68%"></div></div>
+            </div>
+            <div class="stats-card glass">
+                <span class="stat-label">Avg. Wait Time</span>
+                <span class="stat-value">12m</span>
+            </div>
+            <div class="stats-card glass">
+                <span class="stat-label">Security Gates</span>
+                <span class="stat-value status-green">Optimal</span>
+            </div>
+            <div class="stats-card glass">
+                <span class="stat-label">Active Alerts</span>
+                <span class="stat-value status-yellow">2 Live</span>
+            </div>
+        </div>
+
+
+        <main class="dashboard">
+            <!-- Modal Container for Interactions -->
+            <div id="interactive-modal" class="modal-overlay hidden">
+                <div class="modal-content glass">
+                    <button class="close-modal"><i class="fa-solid fa-xmark"></i></button>
+                    <div id="modal-body"></div>
+                </div>
+            </div>
+
+            <!-- Alert Banner Area -->
+            <div id="alert-banner-container"></div>
+
+            <!-- Main Content Grid -->
+            <div class="content-grid">
+                
+                <!-- Venue Map Section -->
+                <section class="card glass interactive-map">
+                    <header class="card-header">
+                        <h2><i class="fa-solid fa-map-location-dot"></i> Live Venue Map</h2>
+                        <div class="map-controls">
+                            <div class="legend">
+                                <span class="legend-item"><span class="dot green"></span> Smooth</span>
+                                <span class="legend-item"><span class="dot yellow"></span> Busy</span>
+                                <span class="legend-item"><span class="dot red"></span> Congested</span>
+                            </div>
+                            <div class="toggle-container">
+                                <label class="switch holo-switch">
+                                    <input type="checkbox" id="holo-toggle">
+                                    <span class="slider round"></span>
+                                </label>
+                                <span class="toggle-label">Holo-Vision</span>
+                            </div>
+                        </div>
+                    </header>
+                    <div class="map-level-selector">
+                        <button class="level-btn active" data-level="L100">L100</button>
+                        <button class="level-btn" data-level="L200">L200</button>
+                        <button class="level-btn" data-level="VIP">VIP</button>
+                    </div>
+                    <div class="map-container-3d">
+                        <div class="map-container">
+
+                        <!-- SVG Map Simulation -->
+                        <svg viewBox="0 0 400 300" class="stadium-map">
+                            <defs>
+                                <filter id="glow">
+                                    <feGaussianBlur stdDeviation="2.5" result="coloredBlur"/>
+                                    <feMerge>
+                                        <feMergeNode in="coloredBlur"/>
+                                        <feMergeNode in="SourceGraphic"/>
+                                    </feMerge>
+                                </filter>
+                            </defs>
+                            <!-- Field -->
+
+                            <rect class="field" x="120" y="80" width="160" height="140" rx="20"/>
+                            <!-- Sectors -->
+                            <path class="sector" id="sector-north" d="M 120 70 Q 200 40 280 70 L 320 20 Q 200 -20 80 20 Z" />
+                            <path class="sector" id="sector-south" d="M 120 230 Q 200 260 280 230 L 320 280 Q 200 320 80 280 Z" />
+                            <path class="sector" id="sector-west" d="M 110 80 Q 80 150 110 220 L 60 250 Q 10 150 60 50 Z" />
+                            <path class="sector" id="sector-east" d="M 290 80 Q 320 150 290 220 L 340 250 Q 390 150 340 50 Z" />
+                            
+                            <!-- Labels -->
+                            <text x="200" y="45" class="map-label">Gate N (North)</text>
+                            <text x="200" y="270" class="map-label">Gate S (South)</text>
+                            <text x="40" y="155" class="map-label" transform="rotate(-90 40,155)">Gate W</text>
+                            <text x="360" y="155" class="map-label" transform="rotate(90 360,155)">Gate E</text>
+                            
+                            <!-- Interactive Route Paths (Hidden by default) -->
+                            <path class="route-path hidden" id="route-restroom" d="M 200 45 Q 200 100 280 150 L 320 150" filter="url(#glow)" />
+                            <path class="route-path hidden" id="route-food" d="M 200 45 Q 200 100 100 150 L 80 150" filter="url(#glow)" />
+                            <path class="route-path hidden" id="route-exit" d="M 200 45 Q 350 50 350 250" filter="url(#glow)" />
+                            
+                            <!-- Container for Animated Crowd Simulation Dots -->
+                            <g id="crowd-simulation-layer"></g>
+                        </svg>
+
+                        
+                        <!-- Overlay Details -->
+                        <div class="map-overlay-info" id="map-info">
+                            <h3>Select a gate for details</h3>
+                        </div>
+                    </div>
+                    </div>
+                </section>
+
+                <!-- Wait Times Section -->
+                <section class="card glass wait-times">
+                    <header class="card-header">
+                        <h2><i class="fa-solid fa-clock"></i> Live Queues</h2>
+                        <span class="pulse-indicator">Live</span>
+                    </header>
+                    <div class="queue-list" id="queue-list">
+                        <!-- Queue items generated by JS -->
+                    </div>
+                </section>
+
+                <!-- Smart Routing / Quick Actions Section -->
+                <section class="card glass quick-actions">
+                    <header class="card-header">
+                        <h2><i class="fa-solid fa-route"></i> Optimal Routes</h2>
+                        <span class="route-hint">Click destination to view</span>
+                    </header>
+                    <div class="route-options">
+                        <button class="route-btn" data-route="route-restroom">
+                            <i class="fa-solid fa-restroom"></i>
+                            <div class="route-details">
+                                <span>Nearest Restroom</span>
+                                <span class="route-time">2 min walk • Level 100</span>
+                            </div>
+                            <i class="fa-solid fa-chevron-right"></i>
+                        </button>
+                        <button class="route-btn" data-route="route-food">
+                            <i class="fa-solid fa-burger"></i>
+                            <div class="route-details">
+                                <span>Fastest Concession</span>
+                                <span class="route-time">3 min walk • Sect 103</span>
+                            </div>
+                            <i class="fa-solid fa-chevron-right"></i>
+                        </button>
+                        <button class="route-btn" data-route="route-exit">
+                            <i class="fa-solid fa-door-open"></i>
+                            <div class="route-details">
+                                <span>Fastest Exit Route</span>
+                                <span class="route-time">Avoid Gate N (Congested)</span>
+                            </div>
+                            <i class="fa-solid fa-chevron-right"></i>
+                        </button>
+                        <button class="route-btn ar-btn" id="launch-ar-btn">
+                            <i class="fa-solid fa-vr-cardboard"></i>
+                            <div class="route-details">
+                                <span style="background: -webkit-linear-gradient(45deg, #FF6B6B, #8B5CF6); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Live AR Navigation</span>
+                                <span class="route-time"><i class="fa-solid fa-camera"></i> Camera required</span>
+                            </div>
+                            <i class="fa-solid fa-expand"></i>
+                        </button>
+                    </div>
+                </section>
+
+                <!-- In-Seat Order Tracker (Hidden until order starts) -->
+                <section class="card glass order-tracker hidden" id="order-tracker">
+                    <header class="card-header">
+                        <h2><i class="fa-solid fa-burger"></i> Order Status</h2>
+                        <span class="order-id">#SV-4022</span>
+                    </header>
+                    <div class="tracking-content">
+                        <div class="tracking-steps">
+                            <div class="step completed">
+                                <i class="fa-solid fa-receipt"></i>
+                                <span>Placed</span>
+                            </div>
+                            <div class="step active">
+                                <i class="fa-solid fa-fire-burner"></i>
+                                <span>Preparing</span>
+                            </div>
+                            <div class="step">
+                                <i class="fa-solid fa-moped"></i>
+                                <span>Delivery</span>
+                            </div>
+                        </div>
+                        <div class="tracking-msg">Our staff is preparing your Express Burger!</div>
+                    </div>
+                </section>
+
+                <!-- Fan Wall: Live Community Feed -->
+                <section class="card glass fan-wall">
+                    <header class="card-header">
+                        <h2><i class="fa-solid fa-users"></i> Live Fan Wall</h2>
+                        <span class="online-count">4.2k Online</span>
+                    </header>
+                    <div class="fan-feed" id="fan-feed">
+                        <div class="fan-post">
+                            <span class="fan-name">@stadium_fan</span>
+                            <p>Unreal atmosphere tonight! Let's go Warriors! 🏟️🔥</p>
+                        </div>
+                    </div>
+                </section>
+
+            </div>
+        </main>
+        
+        <!-- POV Modal -->
+        <div id="pov-modal" class="modal-overlay hidden">
+            <div class="pov-content glass">
+                <button class="close-pov"><i class="fa-solid fa-xmark"></i></button>
+                <div class="pov-image-container">
+                    <img src="stadium_seat_pov_1776529958541.png" alt="Seat POV" class="pov-img">
+                    <div class="pov-overlay">
+                        <h3>Section 104 • Row G</h3>
+                        <p>Live Field Vision</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- AI Copilot Chatbot -->
+    <div id="ai-chat-widget">
+        <button id="ai-fab" class="glass"><i class="fa-solid fa-robot"></i></button>
+        <div id="ai-chat-window" class="hidden glass">
+            <div class="chat-header">
+                <h3><i class="fa-solid fa-sparkles"></i> VenueAI Copilot</h3>
+                <button id="close-chat"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="chat-messages" id="chat-messages">
+                <div class="message bot">Hi! I'm your AI venue copilot. How can I help you navigate the stadium today?</div>
+            </div>
+            <div class="chat-input-area">
+                <input type="text" id="chat-input" placeholder="Ask about wait times, food...">
+                <button id="send-chat"><i class="fa-solid fa-paper-plane"></i></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- AR View Simulator -->
+    <div id="ar-overlay" class="hidden">
+        <video id="ar-video" autoplay playsinline></video>
+        <div class="ar-hud">
+            <button id="close-ar" class="glass"><i class="fa-solid fa-arrow-left"></i> Exit AR</button>
+            <div class="ar-target glass">
+                <i class="fa-solid fa-burger"></i>
+                <span>Fastest Concession</span>
+                <p>150 ft straight ahead</p>
+            </div>
+            <div class="ar-crosshair">
+                <div class="bracket top-left"></div>
+                <div class="bracket top-right"></div>
+                <div class="bracket bottom-left"></div>
+                <div class="bracket bottom-right"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
