@@ -1,0 +1,20 @@
+{
+  "name": "stadiumsense",
+  "version": "1.0.0",
+  "description": "SmartVenue Companion - Real-time venue navigation and crowd management",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "keywords": [
+    "stadium",
+    "venue",
+    "crowd-management",
+    "ar-navigation"
+  ],
+  "author": "RiyaSinghal26",
+  "license": "MIT",
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}
